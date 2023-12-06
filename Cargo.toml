@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "mruby-objdump",
+    "edgeruby",
+]

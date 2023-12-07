@@ -5,7 +5,23 @@ version = 3
 [[package]]
 name = "mruby-objdump"
 version = "0.1.0"
+dependencies = [
+ "plain",
+ "simple_endian",
+]
 
 [[package]]
 name = "mrubyedge"
 version = "0.1.0"
+
+[[package]]
+name = "plain"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
+
+[[package]]
+name = "simple_endian"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35bb59c226c54cf37f73c75af60d194ef604b66d622baef07b44f8caccb469ae"

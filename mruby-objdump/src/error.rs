@@ -5,6 +5,7 @@ use std::fmt;
 pub enum Error {
     General,
     TooShort,
+    InvalidFormat,
 }
 
 impl fmt::Display for Error {

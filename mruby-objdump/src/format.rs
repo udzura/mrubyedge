@@ -5,6 +5,7 @@ use core::ffi::CStr;
 use core::mem;
 
 use crate::error::Error;
+use crate::marker::*;
 
 use plain::Plain;
 use simple_endian::{u16be, u32be};
@@ -96,16 +97,22 @@ pub fn load(src: &[u8]) -> Result<(), Error> {
         return Err(Error::TooShort);
     }
 
-    let mut irep_size: usize = 0;
-    use ascii::Char::*;
     loop {
         match peek4(head) {
             Some(chrs) => match chrs {
-                [CapitalI, CapitalR, CapitalE, CapitalP] => {
+                IREP => {
                     let cur = section_irep_1(head)?;
                     head = &head[cur..];
                 }
-                [CapitalE, CapitalN, CapitalD, Null] => {
+                LVAR => {
+                    let cur = section_skip(head)?;
+                    head = &head[cur..];
+                }
+                DBG => {
+                    let cur = section_skip(head)?;
+                    head = &head[cur..];
+                }
+                END => {
                     let cur = section_end(head)?;
                     head = &head[cur..];
                 }
@@ -199,16 +206,26 @@ pub fn section_irep_1(head: &[u8]) -> Result<usize, Error> {
 
 pub fn section_end(head: &[u8]) -> Result<usize, Error> {
     let header = SectionMiscHeader::from_bytes(head)?;
-    dbg!(header.ident.as_ascii());
-    Ok(mem::size_of::<SectionMiscHeader>())
+    eprintln!("end section detected");
+    Ok(be32_to_u32(header.size) as usize)
 }
 
-pub fn peek4<'a>(src: &'a [u8]) -> Option<&'a [ascii::Char]> {
+pub fn section_skip(head: &[u8]) -> Result<usize, Error> {
+    let header = SectionMiscHeader::from_bytes(head)?;
+    eprintln!("skipped section {:?}", header.ident.as_ascii());
+    Ok(be32_to_u32(header.size) as usize)
+}
+
+pub fn peek4<'a>(src: &'a [u8]) -> Option<[ascii::Char; 4]> {
     if src.len() < 4 {
         // EoD
         return None;
     }
-    src[0..4].as_ascii()
+    if let Some([a, b, c, d]) = src[0..4].as_ascii() {
+        Some([*a, *b, *c, *d])
+    } else {
+        None
+    }
 }
 
 pub fn be32_to_u32(be32: [u8; 4]) -> u32 {

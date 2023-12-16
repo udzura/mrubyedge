@@ -381,10 +381,10 @@ const BSS: fn(&mut [u8]) -> Fetched = fetch_bss;
 const S: fn(&mut [u8]) -> Fetched = fetch_s;
 const W: fn(&mut [u8]) -> Fetched = fetch_w;
 
-const FETCH_TABLE: [fn(&mut [u8]) -> Fetched; 106] = [
+const FETCH_TABLE: [fn(&mut [u8]) -> Fetched; 107] = [
     Z, BB, BB, BB, BB, B, B, B, B, B, B, B, B, B, BS, BSS, BB, B, B, B, B, BB, BB, BB, BB, BB, BB,
     BB, BB, BB, BB, BB, BB, BBB, BBB, B, B, S, BS, BS, BS, S, B, BB, B, BBB, BBB, BBB, BBB, Z, BB,
     BS, W, BB, Z, BB, B, B, B, BS, B, BB, B, BB, B, B, B, B, B, B, B, BB, BBB, B, BB, B, BBB, BBB,
     BBB, B, BB, BB, B, BB, BB, B, BB, BB, BB, B, B, B, BB, BB, BB, BB, BB, B, B, B, BBB, B, Z, Z,
-    Z, Z,
+    Z, Z, Z,
 ];

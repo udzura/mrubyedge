@@ -1,14 +1,22 @@
 extern crate simple_endian;
+extern crate web_sys;
 
 use core::ascii;
 use core::ffi::CStr;
 use core::mem;
 
-use crate::error::Error;
+use crate::insn::OpCode;
 use crate::marker::*;
+use crate::{error::Error, insn};
 
 use plain::Plain;
 use simple_endian::{u16be, u32be};
+
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
 
 #[repr(C)]
 #[derive(Debug)]
@@ -88,7 +96,7 @@ pub fn load(src: &[u8]) -> Result<(), Error> {
     size -= binheader_size;
     head = &head[binheader_size..];
 
-    dbg!(bin_header);
+    // dbg!(bin_header);
     let binsize: u32 = be32_to_u32(bin_header.size);
     eprintln!("size {}", binsize);
 
@@ -152,7 +160,15 @@ pub fn section_irep_1(head: &[u8]) -> Result<usize, Error> {
         dbg!(ilen);
         cur += record_size;
 
-        let insns = &head[cur..cur + ilen];
+        let mut insns = &head[cur..cur + ilen];
+        let ps: usize = 0;
+        while ps < insns.len() {
+            let op = insns[ps];
+            let opcode: OpCode = op.try_into()?;
+            let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
+            println!("insn: {:?} {:?}", opcode, fetched);
+            log!("insn: {:?} {:?}", opcode, fetched);
+        }
         // dbg!(insns);
 
         cur += ilen;

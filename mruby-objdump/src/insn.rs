@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
-#[derive(Copy, Clone)]
+use crate::error::Error;
+
+#[derive(Copy, Clone, Debug)]
 pub enum Fetched {
     Z,
     B(u8),
@@ -233,6 +235,30 @@ pub enum OpCode {
     NumberOfOpcode, // for fetcher table
 }
 
+use self::OpCode::*;
+const ENUM_TABLE: [OpCode; OpCode::NumberOfOpcode as usize] = [
+    NOP, MOVE, LOADL, LOADI, LOADINEG, LOADI__1, LOADI_0, LOADI_1, LOADI_2, LOADI_3, LOADI_4,
+    LOADI_5, LOADI_6, LOADI_7, LOADI16, LOADI32, LOADSYM, LOADNIL, LOADSELF, LOADT, LOADF, GETGV,
+    SETGV, GETSV, SETSV, GETIV, SETIV, GETCV, SETCV, GETCONST, SETCONST, GETMCNST, SETMCNST,
+    GETUPVAR, SETUPVAR, GETIDX, SETIDX, JMP, JMPIF, JMPNOT, JMPNIL, JMPUW, EXCEPT, RESCUE, RAISEIF,
+    SSEND, SSENDB, SEND, SENDB, CALL, SUPER, ARGARY, ENTER, KEY_P, KEYEND, KARG, RETURN,
+    RETURN_BLK, BREAK, BLKPUSH, ADD, ADDI, SUB, SUBI, MUL, DIV, EQ, LT, LE, GT, GE, ARRAY, ARRAY2,
+    ARYCAT, ARYPUSH, ARYSPLAT, AREF, ASET, APOST, INTERN, SYMBOL, STRING, STRCAT, HASH, HASHADD,
+    HASHCAT, LAMBDA, BLOCK, METHOD, RANGE_INC, RANGE_EXC, OCLASS, CLASS, MODULE, EXEC, DEF, ALIAS,
+    UNDEF, SCLASS, TCLASS, DEBUG, ERR, EXT1, EXT2, EXT3, STOP,
+];
+
+impl TryFrom<u8> for OpCode {
+    type Error = Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0..=105 => Ok(ENUM_TABLE[value as usize]),
+            _ => Err(Error::InvalidOpCode),
+        }
+    }
+}
+
 impl Debug for OpCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -347,41 +373,100 @@ impl Debug for OpCode {
     }
 }
 
-fn fetch_z(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_z(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 1 {
+        return Err(Error::TooShort);
+    }
+    *bin = &bin[1..];
+    Ok(Fetched::Z)
 }
-fn fetch_b(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_b(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 2 {
+        return Err(Error::TooShort);
+    }
+    let a = bin[1];
+    let operand = Fetched::B(a);
+
+    *bin = &bin[2..];
+    Ok(operand)
 }
-fn fetch_bb(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_bb(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 3 {
+        return Err(Error::TooShort);
+    }
+    let a = bin[1];
+    let b = bin[2];
+    let operand = Fetched::BB(a, b);
+
+    *bin = &bin[3..];
+    Ok(operand)
 }
-fn fetch_bbb(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_bbb(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 4 {
+        return Err(Error::TooShort);
+    }
+    let a = bin[1];
+    let b = bin[2];
+    let c = bin[3];
+    let operand = Fetched::BBB(a, b, c);
+
+    *bin = &bin[4..];
+    Ok(operand)
 }
-fn fetch_bs(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_bs(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 4 {
+        return Err(Error::TooShort);
+    }
+    let a = bin[1];
+    let s = ((bin[2] as u16) << 8) & bin[3] as u16;
+    let operand = Fetched::BS(a, s);
+
+    *bin = &bin[4..];
+    Ok(operand)
 }
-fn fetch_bss(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_bss(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 6 {
+        return Err(Error::TooShort);
+    }
+    let a = bin[1];
+    let s1 = ((bin[2] as u16) << 8) & bin[3] as u16;
+    let s2 = ((bin[2] as u16) << 8) & bin[5] as u16;
+    let operand = Fetched::BSS(a, s1, s2);
+
+    *bin = &bin[6..];
+    Ok(operand)
 }
-fn fetch_s(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_s(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 3 {
+        return Err(Error::TooShort);
+    }
+    let s = ((bin[1] as u16) << 8) & bin[2] as u16;
+    let operand = Fetched::S(s);
+
+    *bin = &bin[3..];
+    Ok(operand)
 }
-fn fetch_w(bin: &mut [u8]) -> Fetched {
-    todo!()
+fn fetch_w(bin: &mut &[u8]) -> Result<Fetched, Error> {
+    if bin.len() < 4 {
+        return Err(Error::TooShort);
+    }
+    let w = ((bin[1] as u32) << 16) & ((bin[2] as u32) << 8) & bin[3] as u32;
+    let operand = Fetched::W(w);
+
+    *bin = &bin[4..];
+    Ok(operand)
 }
 
-const Z: fn(&mut [u8]) -> Fetched = fetch_z;
-const B: fn(&mut [u8]) -> Fetched = fetch_b;
-const BB: fn(&mut [u8]) -> Fetched = fetch_bb;
-const BBB: fn(&mut [u8]) -> Fetched = fetch_bbb;
-const BS: fn(&mut [u8]) -> Fetched = fetch_bs;
-const BSS: fn(&mut [u8]) -> Fetched = fetch_bss;
-const S: fn(&mut [u8]) -> Fetched = fetch_s;
-const W: fn(&mut [u8]) -> Fetched = fetch_w;
+const Z: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_z;
+const B: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_b;
+const BB: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_bb;
+const BBB: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_bbb;
+const BS: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_bs;
+const BSS: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_bss;
+const S: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_s;
+const W: fn(&mut &[u8]) -> Result<Fetched, Error> = fetch_w;
 
-const FETCH_TABLE: [fn(&mut [u8]) -> Fetched; OpCode::NumberOfOpcode as usize] = [
+pub const FETCH_TABLE: [fn(&mut &[u8]) -> Result<Fetched, Error>; OpCode::NumberOfOpcode as usize] = [
     Z, BB, BB, BB, BB, B, B, B, B, B, B, B, B, B, BS, BSS, BB, B, B, B, B, BB, BB, BB, BB, BB, BB,
     BB, BB, BB, BB, BB, BB, BBB, BBB, B, B, S, BS, BS, BS, S, B, BB, B, BBB, BBB, BBB, BBB, Z, BB,
     BS, W, BB, Z, BB, B, B, B, BS, B, BB, B, BB, B, B, B, B, B, B, B, BB, BBB, B, BB, B, BBB, BBB,

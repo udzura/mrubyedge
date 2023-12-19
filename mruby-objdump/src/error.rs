@@ -6,6 +6,7 @@ pub enum Error {
     General,
     TooShort,
     InvalidFormat,
+    InvalidOpCode,
 }
 
 impl fmt::Display for Error {

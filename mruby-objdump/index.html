@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>mruby-objdumop on web</title>
+  </head>
+  <body>
+    <script type="module">
+      import init, { debug_output } from "./pkg/mruby_objdump.js";
+      init().then(() => {
+        debug_output();
+      });
+    </script>
+  </body>
+</html>

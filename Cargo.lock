@@ -42,6 +42,10 @@ dependencies = [
 [[package]]
 name = "mrubyedge"
 version = "0.1.0"
+dependencies = [
+ "plain",
+ "simple_endian",
+]
 
 [[package]]
 name = "once_cell"

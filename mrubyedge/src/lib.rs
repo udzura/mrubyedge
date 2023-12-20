@@ -4,6 +4,7 @@
 
 pub mod eval;
 pub mod rite;
+pub mod vm;
 
 use std::error;
 use std::fmt;

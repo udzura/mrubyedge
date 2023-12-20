@@ -6,68 +6,68 @@ use super::Error;
 use core::ascii;
 use core::ffi::CStr;
 use core::mem;
+use std::ffi::CString;
 
-use super::insn::{self, OpCode};
 use super::marker::*;
 
 use simple_endian::{u16be, u32be};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Rite<'a> {
-    pub binary_header: &'a RiteBinaryHeader,
-    pub irep_header: &'a SectionIrepHeader,
+    pub binary_header: RiteBinaryHeader,
+    pub irep_header: SectionIrepHeader,
     pub irep: Vec<Irep<'a>>,
-    pub lvar: LVar<'a>,
+    pub lvar: Option<LVar>,
 }
 
 #[derive(Debug)]
 pub struct Irep<'a> {
-    pub header: &'a IrepRecord,
+    pub header: IrepRecord,
     pub insn: &'a [u8],
+    pub plen: usize,
+    pub strvals: Vec<CString>,
+    pub slen: usize,
+    pub syms: Vec<CString>,
 }
 
 #[derive(Debug)]
-pub struct LVar<'a> {
-    pub header: &'a SectionMiscHeader,
+pub struct LVar {
+    pub header: SectionMiscHeader,
 }
 
 pub fn load<'a>(src: &'a [u8]) -> Result<Rite<'a>, Error> {
+    let mut rite = Rite::default();
+
     let mut size = src.len();
     let mut head = src;
     let binheader_size = mem::size_of::<RiteBinaryHeader>();
     if size < binheader_size {
         return Err(Error::TooShort);
     }
-    let bin_header = RiteBinaryHeader::from_bytes(&head[0..binheader_size])?;
+    let binary_header = RiteBinaryHeader::from_bytes(&head[0..binheader_size])?;
+    rite.binary_header = binary_header;
     size -= binheader_size;
     head = &head[binheader_size..];
 
-    // dbg!(bin_header);
-    let binsize: u32 = be32_to_u32(bin_header.size);
-    eprintln!("size {}", binsize);
+    // let binsize: u32 = be32_to_u32(rite.binary_header.size);
 
     let irep_header_size = mem::size_of::<SectionIrepHeader>();
     if size < irep_header_size {
         return Err(Error::TooShort);
     }
 
-    let mut irep_header: &SectionIrepHeader = &SectionIrepHeader::default();
-    let mut irep: Vec<Irep> = Vec::default();
-    let mut lvar: LVar = LVar {
-        header: &SectionMiscHeader::default(),
-    };
     loop {
         match peek4(head) {
             Some(chrs) => match chrs {
                 IREP => {
-                    let (cur, irep_header_, irep_) = section_irep_1(head)?;
-                    irep_header = irep_header_;
-                    irep = irep_;
+                    let (cur, irep_header, irep) = section_irep_1(head)?;
+                    rite.irep_header = irep_header;
+                    rite.irep = irep;
                     head = &head[cur..];
                 }
                 LVAR => {
-                    let (cur, lvar_) = section_lvar(head)?;
-                    lvar = lvar_;
+                    let (cur, lvar) = section_lvar(head)?;
+                    rite.lvar = Some(lvar);
                     head = &head[cur..];
                 }
                 DBG => {
@@ -90,17 +90,10 @@ pub fn load<'a>(src: &'a [u8]) -> Result<Rite<'a>, Error> {
         }
     }
 
-    let rite = Rite {
-        binary_header: bin_header,
-        irep_header,
-        irep,
-        lvar,
-    };
-
     Ok(rite)
 }
 
-pub fn section_irep_1(head: &[u8]) -> Result<(usize, &SectionIrepHeader, Vec<Irep>), Error> {
+pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep>), Error> {
     let mut cur = 0;
 
     let irep_header_size = mem::size_of::<SectionIrepHeader>();
@@ -114,24 +107,18 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, &SectionIrepHeader, Vec<Ire
     let mut ireps: Vec<Irep> = Vec::new();
 
     while cur < irep_size {
+        let mut strvals = Vec::<CString>::new();
+        let mut syms = Vec::<CString>::new();
+
         let start_cur = cur;
         // insn
         let record_size = mem::size_of::<IrepRecord>();
         let irep_record = IrepRecord::from_bytes(&head[cur..cur + record_size])?;
         let irep_rec_size = be32_to_u32(irep_record.size) as usize;
         let ilen = be32_to_u32(irep_record.ilen) as usize;
-        dbg!(ilen);
         cur += record_size;
 
-        let mut insns = &head[cur..cur + ilen];
-        let ps: usize = 0;
-        while ps < insns.len() {
-            let op = insns[ps];
-            let opcode: OpCode = op.try_into()?;
-            let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
-            println!("insn: {:?} {:?}", opcode, fetched);
-        }
-        // dbg!(insns);
+        let insns = &head[cur..cur + ilen];
 
         cur += ilen;
 
@@ -139,7 +126,6 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, &SectionIrepHeader, Vec<Ire
         let data = &head[cur..cur + 2];
         let plen = be16_to_u16([data[0], data[1]]) as usize;
         cur += 2;
-        dbg!(plen);
         for _ in 0..plen {
             let typ = head[cur];
             match typ {
@@ -150,11 +136,11 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, &SectionIrepHeader, Vec<Ire
                     cur += 2;
                     let strval = CStr::from_bytes_with_nul(&head[cur..cur + strlen])
                         .or(Err(Error::InvalidFormat))?;
-                    dbg!(strval);
+                    strvals.push(strval.to_owned());
                     cur += strlen;
                 }
                 _ => {
-                    unimplemented!("more support pool type");
+                    unimplemented!("require more support pool type");
                 }
             }
         }
@@ -163,24 +149,25 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, &SectionIrepHeader, Vec<Ire
         let data = &head[cur..cur + 2];
         let slen = be16_to_u16([data[0], data[1]]) as usize;
         cur += 2;
-        dbg!(slen);
         for _ in 0..slen {
             let data = &head[cur..cur + 2];
             let symlen = be16_to_u16([data[0], data[1]]) as usize + 1;
             cur += 2;
             let symval = CStr::from_bytes_with_nul(&head[cur..cur + symlen])
                 .or(Err(Error::InvalidFormat))?;
-            dbg!(symval);
+            syms.push(symval.to_owned());
             cur += symlen;
         }
 
         cur = start_cur + irep_rec_size;
-        dbg!(cur);
-        dbg!(irep_size);
 
         let irep = Irep {
             header: irep_record,
             insn: insns,
+            plen,
+            strvals,
+            slen,
+            syms,
         };
         ireps.push(irep);
     }
@@ -197,8 +184,7 @@ pub fn section_end(head: &[u8]) -> Result<usize, Error> {
 pub fn section_lvar(head: &[u8]) -> Result<(usize, LVar), Error> {
     let header = SectionMiscHeader::from_bytes(head)?;
     let lvar = LVar { header };
-    eprintln!("skipped section {:?}", header.ident.as_ascii());
-    Ok((be32_to_u32(header.size) as usize, lvar))
+    Ok((be32_to_u32(lvar.header.size) as usize, lvar))
 }
 
 pub fn section_skip(head: &[u8]) -> Result<usize, Error> {

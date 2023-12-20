@@ -4,7 +4,7 @@ use plain::Plain;
 use super::Error;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct RiteBinaryHeader {
     pub ident: [u8; 4],
     pub major_version: [u8; 2],
@@ -16,13 +16,13 @@ pub struct RiteBinaryHeader {
 unsafe impl Plain for RiteBinaryHeader {}
 
 impl RiteBinaryHeader {
-    pub fn from_bytes(buf: &[u8]) -> Result<&Self, Error> {
-        plain::from_bytes(buf).map_err(|_| Error::General)
+    pub fn from_bytes(buf: &[u8]) -> Result<Self, Error> {
+        plain::from_bytes(buf).map_err(|_| Error::General).cloned()
     }
 }
 
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SectionMiscHeader {
     pub ident: [u8; 4],
     pub size: [u8; 4],
@@ -30,13 +30,13 @@ pub struct SectionMiscHeader {
 unsafe impl Plain for SectionMiscHeader {}
 
 impl SectionMiscHeader {
-    pub fn from_bytes(buf: &[u8]) -> Result<&Self, Error> {
-        plain::from_bytes(buf).map_err(|_| Error::General)
+    pub fn from_bytes(buf: &[u8]) -> Result<Self, Error> {
+        plain::from_bytes(buf).map_err(|_| Error::General).cloned()
     }
 }
 
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SectionIrepHeader {
     pub ident: [u8; 4],
     pub size: [u8; 4],
@@ -46,13 +46,13 @@ pub struct SectionIrepHeader {
 unsafe impl Plain for SectionIrepHeader {}
 
 impl SectionIrepHeader {
-    pub fn from_bytes(buf: &[u8]) -> Result<&Self, Error> {
-        plain::from_bytes(buf).map_err(|_| Error::General)
+    pub fn from_bytes(buf: &[u8]) -> Result<Self, Error> {
+        plain::from_bytes(buf).map_err(|_| Error::General).cloned()
     }
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct IrepRecord {
     pub size: [u8; 4],
     pub nlocals: [u8; 2],
@@ -65,7 +65,7 @@ pub struct IrepRecord {
 unsafe impl Plain for IrepRecord {}
 
 impl IrepRecord {
-    pub fn from_bytes(buf: &[u8]) -> Result<&Self, Error> {
-        plain::from_bytes(buf).map_err(|_| Error::General)
+    pub fn from_bytes(buf: &[u8]) -> Result<Self, Error> {
+        plain::from_bytes(buf).map_err(|_| Error::General).cloned()
     }
 }

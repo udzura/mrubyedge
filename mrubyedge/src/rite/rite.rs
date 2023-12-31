@@ -42,6 +42,7 @@ pub fn load<'a>(src: &'a [u8]) -> Result<Rite<'a>, Error> {
     let mut head = src;
     let binheader_size = mem::size_of::<RiteBinaryHeader>();
     if size < binheader_size {
+        dbg!(size < binheader_size);
         return Err(Error::TooShort);
     }
     let binary_header = RiteBinaryHeader::from_bytes(&head[0..binheader_size])?;
@@ -53,6 +54,7 @@ pub fn load<'a>(src: &'a [u8]) -> Result<Rite<'a>, Error> {
 
     let irep_header_size = mem::size_of::<SectionIrepHeader>();
     if size < irep_header_size {
+        dbg!(size, irep_header_size, size < irep_header_size);
         return Err(Error::TooShort);
     }
 
@@ -100,6 +102,7 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep
     let irep_header = SectionIrepHeader::from_bytes(&head[cur..irep_header_size])?;
     let irep_size = be32_to_u32(irep_header.size) as usize;
     if head.len() < irep_size {
+        dbg!((head.len(), irep_size, head.len() < irep_size));
         return Err(Error::TooShort);
     }
     cur += irep_header_size;

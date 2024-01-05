@@ -6,9 +6,9 @@ fn main() {
     // dbg!(&rite);
     for (i, irep) in rite.irep.into_iter().enumerate() {
         println!("irep #{}", i);
-        let mut irep = mrubyedge::vm::VMIrep::from_raw_record(irep);
-        dbg!(&irep);
-        irep.eval_insn().unwrap();
+        let mut vm = mrubyedge::vm::VM::open(irep);
+        dbg!(&vm);
+        vm.eval_insn().unwrap();
 
         // mrubyedge::eval::debug_eval_insn(irep.inst_head).unwrap();
     }

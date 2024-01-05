@@ -1,22 +1,83 @@
 use core::ffi::c_void;
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::rc::Rc;
 
-use crate::rite::binfmt::*;
+// use crate::rite::binfmt::*;
 use crate::rite::insn::{Fetched, OpCode};
 use crate::rite::*;
 
 #[derive(Debug)]
 pub struct VM<'insn> {
     pub vm_id: u32,
-    pub top_irep: Box<VMIrep<'insn>>,
-    pub cur_irep: Box<VMIrep<'insn>>,
+    pub top_irep: Rc<VMIrep<'insn>>,
+    pub cur_irep: Rc<VMIrep<'insn>>,
     // pub insns: &'a [u8],
     pub pc: usize,
-    pub target_class: Box<RClass<'insn>>,
-    pub callinfo_vec: Box<CallInfo>,
-    pub exception: Box<RObject<'insn>>,
-    pub regs: [RObject<'insn>; 256],
+    pub target_class: Option<Box<RClass<'insn>>>,
+    pub callinfo_vec: Option<Box<CallInfo>>,
+    pub exception: Option<Box<RObject<'insn>>>,
+    pub regs: HashMap<usize, RObject<'insn>>,
+}
+
+impl<'insn> VM<'insn> {
+    pub fn open(irep: Irep<'insn>) -> VM<'insn> {
+        let top_irep = VMIrep::from_raw_record(irep);
+        let top_irep = Rc::new(top_irep);
+        let vm = VM {
+            vm_id: 1,
+            top_irep: top_irep.clone(),
+            cur_irep: top_irep.clone(),
+            pc: 0,
+            target_class: None,
+            callinfo_vec: None,
+            exception: None,
+            regs: HashMap::new(),
+        };
+        vm
+    }
+
+    pub fn eval_insn(&mut self) -> Result<(), Error> {
+        let cur_irep = self.cur_irep.clone();
+        let mut insns = cur_irep.as_ref().inst_head;
+        while insns.len() > 0 {
+            let op = insns[0];
+            let opcode: OpCode = op.try_into()?;
+            let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
+            println!("insn: {:?} {:?}", opcode, fetched);
+            self.eval_insn1(cur_irep.as_ref(), &opcode, &fetched)?;
+
+            self.pc = self.cur_irep.ilen - insns.len();
+        }
+
+        Ok(())
+    }
+
+    pub fn eval_insn1(
+        &mut self,
+        irep: &VMIrep,
+        opcode: &OpCode,
+        fetched: &Fetched,
+    ) -> Result<(), Error> {
+        match opcode {
+            OpCode::STRING => {
+                if let Fetched::BB(a, b) = fetched {
+                    let strval = &irep.pool[*b as usize];
+                    let RPool::StaticStr(s) = strval;
+                    let regval = RObject::RString(s.to_str().unwrap().to_string());
+                    self.regs.insert(*a as usize, regval);
+                    dbg!(&self.regs);
+                } else {
+                    unreachable!("not BB insn")
+                }
+            }
+
+            op => {
+                unimplemented!("unsupported opcpde {:?}", op)
+            }
+        }
+        Ok(())
+    }
 }
 
 // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L41-L62
@@ -33,9 +94,7 @@ pub struct VMIrep<'insn> {
     pub pool: Vec<RPool>,
     pub syms: Vec<RSym>,
 
-    pub pc: usize,
     pub inst_head: &'insn [u8],
-    pub regs: HashMap<usize, RObject<'insn>>,
 
     pub return_val: Option<RObject<'insn>>,
 }
@@ -66,8 +125,6 @@ impl<'insn> VMIrep<'insn> {
 
         let inst_head = irep.insn;
 
-        let pc = 0;
-        let regs = HashMap::new();
         let return_val = None;
 
         VMIrep {
@@ -80,47 +137,9 @@ impl<'insn> VMIrep<'insn> {
             slen,
             pool,
             syms,
-            pc,
             inst_head,
-            regs,
             return_val,
         }
-    }
-
-    pub fn eval_insn(&mut self) -> Result<(), Error> {
-        let mut insns = self.inst_head;
-        while insns.len() > 0 {
-            let op = insns[0];
-            let opcode: OpCode = op.try_into()?;
-            let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
-            println!("insn: {:?} {:?}", opcode, fetched);
-            self.eval_insn1(&opcode, &fetched)?;
-
-            self.pc = self.ilen - insns.len();
-        }
-
-        Ok(())
-    }
-
-    pub fn eval_insn1(&mut self, opcode: &OpCode, fetched: &Fetched) -> Result<(), Error> {
-        match opcode {
-            OpCode::STRING => {
-                if let Fetched::BB(a, b) = fetched {
-                    let strval = &self.pool[*b as usize];
-                    let RPool::StaticStr(s) = strval;
-                    let regval = RObject::RString(s.to_str().unwrap().to_string());
-                    self.regs.insert(*a as usize, regval);
-                    dbg!(&self.regs);
-                } else {
-                    unreachable!("not BB insn")
-                }
-            }
-
-            op => {
-                unimplemented!("unsupported opcpde {:?}", op)
-            }
-        }
-        Ok(())
     }
 }
 

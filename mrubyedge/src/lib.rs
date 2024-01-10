@@ -3,6 +3,7 @@
 #![feature(new_uninit)]
 
 pub mod eval;
+pub mod klass;
 pub mod rite;
 pub mod vm;
 

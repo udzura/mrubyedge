@@ -10,6 +10,10 @@ fn main() {
         dbg!(&vm);
         vm.eval_insn().unwrap();
 
+        eprintln!("return value:");
+        let top = 0 as usize;
+        dbg!(vm.regs.get(&top).unwrap());
+
         // mrubyedge::eval::debug_eval_insn(irep.inst_head).unwrap();
     }
     ()

@@ -1,11 +1,10 @@
-use core::ffi::c_void;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::rc::Rc;
 
 // use crate::rite::binfmt::*;
 use crate::rite::insn::{Fetched, OpCode};
-use crate::rite::*;
+use crate::{klass, rite::*};
 
 #[derive(Debug)]
 pub struct VM<'insn> {
@@ -45,39 +44,108 @@ impl<'insn> VM<'insn> {
             let opcode: OpCode = op.try_into()?;
             let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
             println!("insn: {:?} {:?}", opcode, fetched);
-            self.eval_insn1(cur_irep.as_ref(), &opcode, &fetched)?;
+            eval_insn1(self, cur_irep.as_ref(), &opcode, &fetched)?;
 
             self.pc = self.cur_irep.ilen - insns.len();
         }
 
         Ok(())
     }
+}
 
-    pub fn eval_insn1(
-        &mut self,
-        irep: &VMIrep,
-        opcode: &OpCode,
-        fetched: &Fetched,
-    ) -> Result<(), Error> {
-        match opcode {
-            OpCode::STRING => {
-                if let Fetched::BB(a, b) = fetched {
-                    let strval = &irep.pool[*b as usize];
-                    let RPool::StaticStr(s) = strval;
-                    let regval = RObject::RString(s.to_str().unwrap().to_string());
-                    self.regs.insert(*a as usize, regval);
-                    dbg!(&self.regs);
-                } else {
-                    unreachable!("not BB insn")
-                }
-            }
-
-            op => {
-                unimplemented!("unsupported opcpde {:?}", op)
+pub fn eval_insn1(
+    vm: &mut VM,
+    irep: &VMIrep,
+    opcode: &OpCode,
+    fetched: &Fetched,
+) -> Result<(), Error> {
+    match opcode {
+        OpCode::STRING => {
+            if let Fetched::BB(a, b) = fetched {
+                let strval = &irep.pool[*b as usize];
+                let RPool::StaticStr(s) = strval;
+                let regval = RObject::RString(s.to_str().unwrap().to_string());
+                vm.regs.insert(*a as usize, regval);
+                dbg!(&vm.regs);
+            } else {
+                unreachable!("not BB insn")
             }
         }
-        Ok(())
+
+        OpCode::SSEND => {
+            if let Fetched::BBB(a, b, c) = fetched {
+                let reg_begin = *a;
+                let arg_count = *c;
+                let obj_klass = klass::new_builtin_object_class();
+                let cur_self = RObject::RInstance(obj_klass);
+
+                let cur_irep = vm.cur_irep.as_ref();
+                let sym = cur_irep.syms[*b as usize]
+                    .value
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+                let mut args = Vec::new();
+                if arg_count > 0 {
+                    for i in (reg_begin + 1)..(reg_begin + arg_count - 1) {
+                        args.push(i as usize)
+                    }
+                }
+
+                let ret = call(&cur_self, sym, &args)?;
+                vm.regs.insert(reg_begin as usize, ret);
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
+        OpCode::RETURN => {
+            if let Fetched::B(a) = fetched {
+                let reg_ret = *a as usize;
+                if let Some(val) = vm.regs.remove(&reg_ret) {
+                    vm.regs.insert(0, val);
+                }
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
+        OpCode::STOP => {
+            return Ok(());
+        }
+
+        op => {
+            unimplemented!("unsupported opcpde {:?}", op)
+        }
     }
+    Ok(())
+}
+
+pub fn call<'a, 'b>(
+    recv: &RObject<'a>,
+    sym: String,
+    _args: &[usize],
+) -> Result<RObject<'b>, Error> {
+    match recv {
+        RObject::RInstance(klass) => match klass.methods.get(&sym) {
+            Some(method) => {
+                if let Method::CMethod(func) = method.body {
+                    func();
+                    return Ok(RObject::Nil);
+                } else {
+                    todo!("eval internal irep");
+                }
+            }
+            None => {
+                eprint!("todo: method_missing");
+                return Err(Error::General);
+            }
+        },
+        _ => {
+            todo!("some day")
+        }
+    }
+    // Ok(RObject::Nil)
 }
 
 // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L41-L62
@@ -156,17 +224,20 @@ pub struct RSym {
 #[derive(Debug)]
 pub enum RObject<'insn> {
     Class(RClass<'insn>),
-    RInstance(*mut c_void),
+    RInstance(RClass<'insn>),
     RString(String),
+    True,
+    False,
+    Nil,
     // ...
 }
 
 #[derive(Debug)]
 pub struct RClass<'insn> {
     pub sym_id: u32,
-    pub num_builtin_method: usize,
-    pub super_klass: Box<RClass<'insn>>,
-    pub methods: Vec<RMethod<'insn>>,
+    // pub num_builtin_method: usize,
+    pub super_klass: Rc<Option<Box<RClass<'insn>>>>,
+    pub methods: HashMap<String, RMethod<'insn>>,
 }
 
 #[derive(Debug)]

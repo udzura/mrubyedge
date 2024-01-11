@@ -16,7 +16,7 @@ pub struct VM<'insn> {
     pub target_class: Option<Box<RClass<'insn>>>,
     pub callinfo_vec: Option<Box<CallInfo>>,
     pub exception: Option<Box<RObject<'insn>>>,
-    pub regs: HashMap<usize, RObject<'insn>>,
+    pub regs: HashMap<usize, Rc<RObject<'insn>>>,
 }
 
 impl<'insn> VM<'insn> {
@@ -65,8 +65,7 @@ pub fn eval_insn1(
                 let strval = &irep.pool[*b as usize];
                 let RPool::StaticStr(s) = strval;
                 let regval = RObject::RString(s.to_str().unwrap().to_string());
-                vm.regs.insert(*a as usize, regval);
-                dbg!(&vm.regs);
+                vm.regs.insert(*a as usize, Rc::new(regval));
             } else {
                 unreachable!("not BB insn")
             }
@@ -87,15 +86,15 @@ pub fn eval_insn1(
                     .to_string();
                 let mut args = Vec::new();
                 if arg_count > 0 {
-                    for i in (reg_begin + 1)..(reg_begin + arg_count - 1) {
+                    for i in (reg_begin + 1)..=(reg_begin + arg_count) {
                         args.push(i as usize)
                     }
                 }
 
-                let ret = call(&cur_self, sym, &args)?;
-                vm.regs.insert(reg_begin as usize, ret);
+                let ret = call_func(vm, &cur_self, sym, &args)?;
+                vm.regs.insert(reg_begin as usize, Rc::new(ret));
             } else {
-                unreachable!("not BB insn")
+                unreachable!("not BBB insn")
             }
         }
 
@@ -106,7 +105,7 @@ pub fn eval_insn1(
                     vm.regs.insert(0, val);
                 }
             } else {
-                unreachable!("not BB insn")
+                unreachable!("not B insn")
             }
         }
 
@@ -121,17 +120,27 @@ pub fn eval_insn1(
     Ok(())
 }
 
-pub fn call<'a, 'b>(
-    recv: &RObject<'a>,
+pub fn call_func<'insn>(
+    vm: &mut VM<'insn>,
+    recv: &RObject<'insn>,
     sym: String,
-    _args: &[usize],
-) -> Result<RObject<'b>, Error> {
+    args: &[usize],
+) -> Result<RObject<'insn>, Error> {
     match recv {
         RObject::RInstance(klass) => match klass.methods.get(&sym) {
             Some(method) => {
                 if let Method::CMethod(func) = method.body {
-                    func();
-                    return Ok(RObject::Nil);
+                    let mut fn_args = Vec::<Rc<RObject>>::default();
+                    for i in args.iter() {
+                        if let Some(value) = vm.regs.get(i) {
+                            fn_args.push(value.clone());
+                        } else {
+                            eprintln!("reg not found");
+                            return Err(Error::General);
+                        }
+                    }
+                    let ret = func(vm, &fn_args);
+                    return Ok(ret);
                 } else {
                     todo!("eval internal irep");
                 }
@@ -246,10 +255,12 @@ pub struct RMethod<'insn> {
     pub body: Method<'insn>,
 }
 
+type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject<'insn>>]) -> RObject<'insn>;
+
 #[derive(Debug)]
 pub enum Method<'insn> {
     RubyMethod(Box<VMIrep<'insn>>),
-    CMethod(fn() -> ()),
+    CMethod(RFn),
 }
 
 #[derive(Debug)]

@@ -21,6 +21,23 @@ pub fn new_builtin_object_class() -> RClass<'static> {
     }
 }
 
-fn builtin_object_imethod_puts() {
-    println!("Hello, world");
+fn builtin_object_imethod_puts<'insn>(
+    _vm: &mut VM<'insn>,
+    args: &[Rc<RObject<'insn>>],
+) -> RObject<'insn> {
+    if args.len() < 1 {
+        eprintln!("invalid arg size");
+        return RObject::Nil;
+    }
+
+    match args[0].clone().as_ref() {
+        RObject::RString(s) => {
+            println!("{}", s);
+        }
+        _ => {
+            eprintln!("type mismatch");
+            return RObject::Nil;
+        }
+    }
+    RObject::Nil
 }

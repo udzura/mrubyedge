@@ -7,6 +7,8 @@ pub mod klass;
 pub mod rite;
 pub mod vm;
 
+pub mod mrb_helper;
+
 use std::error;
 use std::fmt;
 

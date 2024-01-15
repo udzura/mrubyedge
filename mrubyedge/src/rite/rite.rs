@@ -180,7 +180,7 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep
 
 pub fn section_end(head: &[u8]) -> Result<usize, Error> {
     let header = SectionMiscHeader::from_bytes(head)?;
-    eprintln!("end section detected");
+    // eprintln!("end section detected");
     Ok(be32_to_u32(header.size) as usize)
 }
 
@@ -192,7 +192,7 @@ pub fn section_lvar(head: &[u8]) -> Result<(usize, LVar), Error> {
 
 pub fn section_skip(head: &[u8]) -> Result<usize, Error> {
     let header = SectionMiscHeader::from_bytes(head)?;
-    eprintln!("skipped section {:?}", header.ident.as_ascii());
+    // eprintln!("skipped section {:?}", header.ident.as_ascii());
     Ok(be32_to_u32(header.size) as usize)
 }
 

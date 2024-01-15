@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use crate::vm::*;
 
-const KLASS_SYM_ID_OBJECT: u32 = 1;
+pub const KLASS_SYM_ID_OBJECT: u32 = 1;
 
 pub fn new_builtin_object_class() -> RClass<'static> {
     let mut methods = HashMap::new();
@@ -21,10 +21,7 @@ pub fn new_builtin_object_class() -> RClass<'static> {
     }
 }
 
-fn builtin_object_imethod_puts<'insn>(
-    _vm: &mut VM<'insn>,
-    args: &[Rc<RObject<'insn>>],
-) -> RObject<'insn> {
+fn builtin_object_imethod_puts<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> RObject {
     if args.len() < 1 {
         eprintln!("invalid arg size");
         return RObject::Nil;

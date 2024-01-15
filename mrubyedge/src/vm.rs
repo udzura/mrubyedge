@@ -14,10 +14,11 @@ pub struct VM<'insn> {
     pub cur_irep: Rc<VMIrep<'insn>>,
     // pub insns: &'a [u8],
     pub pc: usize,
-    pub target_class: Option<Box<RClass<'insn>>>,
-    pub callinfo_vec: Option<Box<CallInfo>>,
-    pub exception: Option<Box<RObject<'insn>>>,
-    pub regs: HashMap<usize, Rc<RObject<'insn>>>,
+    pub class_arena: HashMap<usize, Rc<RClass<'insn>>>,
+    pub target_class: Option<Rc<RClass<'insn>>>,
+    pub callinfo_vec: Option<Vec<CallInfo>>,
+    pub exception: Option<Box<RObject>>,
+    pub regs: HashMap<usize, Rc<RObject>>,
 }
 
 impl<'insn> VM<'insn> {
@@ -31,6 +32,7 @@ impl<'insn> VM<'insn> {
             let irep = Rc::new(irep);
             irep_arena.insert(i, irep);
         }
+        let class_arena = HashMap::default();
 
         let vm = VM {
             vm_id: 1,
@@ -38,12 +40,25 @@ impl<'insn> VM<'insn> {
             top_irep: top_irep.clone(),
             cur_irep: top_irep.clone(),
             pc: 0,
+            class_arena,
             target_class: None,
             callinfo_vec: None,
             exception: None,
             regs: HashMap::new(),
         };
         vm
+    }
+
+    // TODO: move to klass.rs?
+    pub fn prelude(&mut self) -> Result<(), Error> {
+        let object_class = klass::new_builtin_object_class();
+        let object_class = Rc::new(object_class);
+        self.target_class = Some(object_class.clone());
+
+        self.class_arena
+            .insert(klass::KLASS_SYM_ID_OBJECT as usize, object_class);
+
+        Ok(())
     }
 
     pub fn eval_insn(&mut self) -> Result<(), Error> {
@@ -53,7 +68,7 @@ impl<'insn> VM<'insn> {
             let op = insns[0];
             let opcode: OpCode = op.try_into()?;
             let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
-            println!("insn: {:?} {:?}", opcode, fetched);
+            // println!("insn: {:?} {:?}", opcode, fetched);
             eval_insn1(self, cur_irep.as_ref(), &opcode, &fetched)?;
 
             self.pc = self.cur_irep.ilen - insns.len();
@@ -83,12 +98,15 @@ pub fn eval_insn1(
 
         OpCode::SSEND => {
             if let Fetched::BBB(a, b, c) = fetched {
+                let cur_irep = vm.cur_irep.as_ref();
+
                 let reg_begin = *a;
                 let arg_count = *c;
-                let obj_klass = klass::new_builtin_object_class();
-                let cur_self = RObject::RInstance(obj_klass);
+                let obj_klass = vm.target_class.as_ref().unwrap().clone();
+                let cur_self = RObject::RInstance {
+                    class_index: obj_klass.as_ref().sym_id as usize,
+                };
 
-                let cur_irep = vm.cur_irep.as_ref();
                 let sym = cur_irep.syms[*b as usize]
                     .value
                     .to_str()
@@ -132,34 +150,37 @@ pub fn eval_insn1(
 
 pub fn call_func<'insn>(
     vm: &mut VM<'insn>,
-    recv: &RObject<'insn>,
+    recv: &RObject,
     sym: String,
     args: &[usize],
-) -> Result<RObject<'insn>, Error> {
+) -> Result<RObject, Error> {
     match recv {
-        RObject::RInstance(klass) => match klass.methods.get(&sym) {
-            Some(method) => {
-                if let Method::CMethod(func) = method.body {
-                    let mut fn_args = Vec::<Rc<RObject>>::default();
-                    for i in args.iter() {
-                        if let Some(value) = vm.regs.get(i) {
-                            fn_args.push(value.clone());
-                        } else {
-                            eprintln!("reg not found");
-                            return Err(Error::General);
+        RObject::RInstance { class_index } => {
+            let klass = vm.class_arena.get(class_index).unwrap().clone();
+            match klass.methods.get(&sym) {
+                Some(method) => {
+                    if let Method::CMethod(func) = method.body {
+                        let mut fn_args = Vec::<Rc<RObject>>::default();
+                        for i in args.iter() {
+                            if let Some(value) = vm.regs.get(i) {
+                                fn_args.push(value.clone());
+                            } else {
+                                eprintln!("reg not found");
+                                return Err(Error::General);
+                            }
                         }
+                        let ret = func(vm, &fn_args);
+                        return Ok(ret);
+                    } else {
+                        todo!("eval internal irep");
                     }
-                    let ret = func(vm, &fn_args);
-                    return Ok(ret);
-                } else {
-                    todo!("eval internal irep");
+                }
+                None => {
+                    eprint!("todo: method_missing");
+                    return Err(Error::General);
                 }
             }
-            None => {
-                eprint!("todo: method_missing");
-                return Err(Error::General);
-            }
-        },
+        }
         _ => {
             todo!("some day")
         }
@@ -183,7 +204,7 @@ pub struct VMIrep<'insn> {
 
     pub inst_head: &'insn [u8],
 
-    pub return_val: Option<RObject<'insn>>,
+    pub return_val: Option<RObject>,
 }
 
 impl<'insn> VMIrep<'insn> {
@@ -241,9 +262,9 @@ pub struct RSym {
 }
 
 #[derive(Debug)]
-pub enum RObject<'insn> {
-    Class(RClass<'insn>),
-    RInstance(RClass<'insn>),
+pub enum RObject {
+    Class { class_index: usize },
+    RInstance { class_index: usize },
     RString(String),
     True,
     False,
@@ -265,7 +286,7 @@ pub struct RMethod<'insn> {
     pub body: Method<'insn>,
 }
 
-type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject<'insn>>]) -> RObject<'insn>;
+type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject>]) -> RObject;
 
 #[derive(Debug)]
 pub enum Method<'insn> {

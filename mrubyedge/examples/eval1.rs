@@ -5,7 +5,8 @@ fn main() {
     let rite = mrubyedge::rite::load(bin).unwrap();
     // dbg!(&rite);
     let mut vm = mrubyedge::vm::VM::open(rite);
-    dbg!(&vm);
+    vm.prelude().unwrap();
+    // dbg!(&vm);
     vm.eval_insn().unwrap();
 
     eprintln!("return value:");

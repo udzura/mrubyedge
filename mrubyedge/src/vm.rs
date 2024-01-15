@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::rc::Rc;
@@ -14,8 +15,8 @@ pub struct VM<'insn> {
     pub cur_irep: Rc<VMIrep<'insn>>,
     // pub insns: &'a [u8],
     pub pc: usize,
-    pub class_arena: HashMap<usize, Rc<RClass<'insn>>>,
-    pub target_class: Option<Rc<RClass<'insn>>>,
+    pub class_arena: HashMap<usize, Rc<RefCell<RClass<'insn>>>>,
+    pub target_class: Option<usize>,
     pub callinfo_vec: Option<Vec<CallInfo>>,
     pub exception: Option<Box<RObject>>,
     pub regs: HashMap<usize, Rc<RObject>>,
@@ -52,8 +53,8 @@ impl<'insn> VM<'insn> {
     // TODO: move to klass.rs?
     pub fn prelude(&mut self) -> Result<(), Error> {
         let object_class = klass::new_builtin_object_class();
-        let object_class = Rc::new(object_class);
-        self.target_class = Some(object_class.clone());
+        let object_class = Rc::new(RefCell::new(object_class));
+        self.target_class = Some(object_class.as_ref().borrow().sym_id as usize);
 
         self.class_arena
             .insert(klass::KLASS_SYM_ID_OBJECT as usize, object_class);
@@ -102,9 +103,8 @@ pub fn eval_insn1(
 
                 let reg_begin = *a;
                 let arg_count = *c;
-                let obj_klass = vm.target_class.as_ref().unwrap().clone();
                 let cur_self = RObject::RInstance {
-                    class_index: obj_klass.as_ref().sym_id as usize,
+                    class_index: vm.target_class.unwrap(),
                 };
 
                 let sym = cur_irep.syms[*b as usize]
@@ -157,6 +157,7 @@ pub fn call_func<'insn>(
     match recv {
         RObject::RInstance { class_index } => {
             let klass = vm.class_arena.get(class_index).unwrap().clone();
+            let klass = klass.as_ref().borrow();
             match klass.methods.get(&sym) {
                 Some(method) => {
                     if let Method::CMethod(func) = method.body {

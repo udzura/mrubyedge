@@ -9,6 +9,7 @@ use crate::{klass, rite::*};
 #[derive(Debug)]
 pub struct VM<'insn> {
     pub vm_id: u32,
+    pub irep_arena: HashMap<usize, Rc<VMIrep<'insn>>>,
     pub top_irep: Rc<VMIrep<'insn>>,
     pub cur_irep: Rc<VMIrep<'insn>>,
     // pub insns: &'a [u8],
@@ -20,11 +21,20 @@ pub struct VM<'insn> {
 }
 
 impl<'insn> VM<'insn> {
-    pub fn open(irep: Irep<'insn>) -> VM<'insn> {
-        let top_irep = VMIrep::from_raw_record(irep);
+    pub fn open(mut rite: Rite<'insn>) -> VM<'insn> {
+        let mut irep_arena = HashMap::default();
+        let top_irep = VMIrep::from_raw_record(rite.irep.pop().unwrap());
         let top_irep = Rc::new(top_irep);
+
+        for (i, irep) in rite.irep.into_iter().enumerate() {
+            let irep = VMIrep::from_raw_record(irep);
+            let irep = Rc::new(irep);
+            irep_arena.insert(i, irep);
+        }
+
         let vm = VM {
             vm_id: 1,
+            irep_arena,
             top_irep: top_irep.clone(),
             cur_irep: top_irep.clone(),
             pc: 0,

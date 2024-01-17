@@ -25,7 +25,8 @@ pub struct VM<'insn> {
 impl<'insn> VM<'insn> {
     pub fn open(mut rite: Rite<'insn>) -> VM<'insn> {
         let mut irep_arena = HashMap::default();
-        let top_irep = VMIrep::from_raw_record(rite.irep.pop().unwrap());
+        let top_irep_data = rite.irep.remove(0);
+        let top_irep = VMIrep::from_raw_record(top_irep_data);
         let top_irep = Rc::new(top_irep);
 
         for (i, irep) in rite.irep.into_iter().enumerate() {
@@ -120,9 +121,32 @@ pub fn eval_insn1(
                 }
 
                 let ret = call_func(vm, &cur_self, sym, &args)?;
-                vm.regs.insert(reg_begin as usize, Rc::new(ret));
+                vm.regs.insert(reg_begin as usize, ret);
             } else {
                 unreachable!("not BBB insn")
+            }
+        }
+
+        OpCode::TCLASS => {
+            if let Fetched::B(a) = fetched {
+                let reg_set = *a as usize;
+                let tclass = RObject::Class {
+                    class_index: vm.target_class.unwrap(),
+                };
+                vm.regs.insert(reg_set, Rc::new(tclass));
+            } else {
+                unreachable!("not B insn")
+            }
+        }
+
+        OpCode::METHOD => {
+            if let Fetched::BB(a, b) = fetched {
+                let reg_set = *a as usize;
+                let irep_index = *b as usize;
+                let proc = RObject::RProc { irep_index };
+                vm.regs.insert(reg_set, Rc::new(proc));
+            } else {
+                unreachable!("not BB insn")
             }
         }
 
@@ -135,6 +159,45 @@ pub fn eval_insn1(
             } else {
                 unreachable!("not B insn")
             }
+        }
+
+        OpCode::DEF => {
+            if let Fetched::BB(a, b) = fetched {
+                let reg_tclass = *a as usize;
+                let reg_proc = reg_tclass + 1;
+                let sym_id = *b as usize;
+                let sym_name = &vm.cur_irep.syms[sym_id].value.to_str().unwrap();
+                if let Some(proc) = vm.regs.remove(&reg_proc) {
+                    let tclass = vm.regs.remove(&reg_tclass).unwrap();
+                    if let RObject::Class { class_index } = tclass.as_ref() {
+                        if let RObject::RProc { irep_index } = proc.as_ref() {
+                            let rclass = vm.class_arena.get(class_index).unwrap().clone();
+                            let mut rclass = rclass.borrow_mut();
+                            let irep = vm.irep_arena.get(irep_index).unwrap();
+                            let body = Method::RubyMethod(irep.clone());
+
+                            rclass.methods.insert(
+                                sym_name.to_string(),
+                                RMethod {
+                                    sym_id: 10001,
+                                    body,
+                                },
+                            );
+                        }
+                    } else {
+                        unreachable!("tclass");
+                    }
+                } else {
+                    unreachable!("proc reg");
+                }
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
+        OpCode::ENTER => {
+            // TBA
+            return Ok(());
         }
 
         OpCode::STOP => {
@@ -153,14 +216,14 @@ pub fn call_func<'insn>(
     recv: &RObject,
     sym: String,
     args: &[usize],
-) -> Result<RObject, Error> {
+) -> Result<Rc<RObject>, Error> {
     match recv {
         RObject::RInstance { class_index } => {
             let klass = vm.class_arena.get(class_index).unwrap().clone();
             let klass = klass.as_ref().borrow();
             match klass.methods.get(&sym) {
-                Some(method) => {
-                    if let Method::CMethod(func) = method.body {
+                Some(method) => match &method.body {
+                    Method::CMethod(func) => {
                         let mut fn_args = Vec::<Rc<RObject>>::default();
                         for i in args.iter() {
                             if let Some(value) = vm.regs.get(i) {
@@ -171,11 +234,16 @@ pub fn call_func<'insn>(
                             }
                         }
                         let ret = func(vm, &fn_args);
-                        return Ok(ret);
-                    } else {
-                        todo!("eval internal irep");
+                        return Ok(Rc::new(ret));
                     }
-                }
+                    Method::RubyMethod(body) => {
+                        vm.cur_irep = body.clone();
+                        vm.eval_insn().unwrap();
+                        let zero = 0 as usize;
+                        let ret = vm.regs.remove(&zero).unwrap();
+                        return Ok(ret);
+                    }
+                },
                 None => {
                     eprint!("todo: method_missing");
                     return Err(Error::General);
@@ -267,6 +335,7 @@ pub enum RObject {
     Class { class_index: usize },
     RInstance { class_index: usize },
     RString(String),
+    RProc { irep_index: usize },
     True,
     False,
     Nil,
@@ -291,7 +360,7 @@ type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject>]) -> RObject;
 
 #[derive(Debug)]
 pub enum Method<'insn> {
-    RubyMethod(Box<VMIrep<'insn>>),
+    RubyMethod(Rc<VMIrep<'insn>>),
     CMethod(RFn),
 }
 

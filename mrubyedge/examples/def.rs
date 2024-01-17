@@ -4,17 +4,18 @@ fn main() {
     let bin = include_bytes!("./def.mrb");
     let rite = mrubyedge::rite::load(bin).unwrap();
     // dbg!(&rite);
-    for (i, irep) in rite.irep.into_iter().enumerate() {
-        println!("irep #{}", i);
-        let mut vm = mrubyedge::vm::VM::open(irep);
-        dbg!(&vm);
-        vm.eval_insn().unwrap();
+    let mut vm = mrubyedge::vm::VM::open(rite);
+    vm.prelude().unwrap();
+    // dbg!(&vm);
+    vm.eval_insn().unwrap();
 
-        eprintln!("return value:");
-        let top = 0 as usize;
-        dbg!(vm.regs.get(&top).unwrap());
-
-        // mrubyedge::eval::debug_eval_insn(irep.inst_head).unwrap();
+    eprintln!("return value:");
+    let top = 0 as usize;
+    match vm.regs.get(&top) {
+        Some(v) => eprintln!("{:?}", v),
+        None => eprintln!("None"),
     }
+
+    // dbg!(&vm);
     ()
 }

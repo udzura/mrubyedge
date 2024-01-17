@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 // use crate::rite::binfmt::*;
 use crate::rite::insn::{Fetched, OpCode};
-use crate::{klass, rite::*};
+use crate::{klass, mrb_helper, rite::*};
 
 #[derive(Debug)]
 pub struct VM<'insn> {
@@ -217,44 +217,17 @@ pub fn call_func<'insn>(
     sym: String,
     args: &[usize],
 ) -> Result<Rc<RObject>, Error> {
-    match recv {
-        RObject::RInstance { class_index } => {
-            let klass = vm.class_arena.get(class_index).unwrap().clone();
-            let klass = klass.as_ref().borrow();
-            match klass.methods.get(&sym) {
-                Some(method) => match &method.body {
-                    Method::CMethod(func) => {
-                        let mut fn_args = Vec::<Rc<RObject>>::default();
-                        for i in args.iter() {
-                            if let Some(value) = vm.regs.get(i) {
-                                fn_args.push(value.clone());
-                            } else {
-                                eprintln!("reg not found");
-                                return Err(Error::General);
-                            }
-                        }
-                        let ret = func(vm, &fn_args);
-                        return Ok(Rc::new(ret));
-                    }
-                    Method::RubyMethod(body) => {
-                        vm.cur_irep = body.clone();
-                        vm.eval_insn().unwrap();
-                        let zero = 0 as usize;
-                        let ret = vm.regs.remove(&zero).unwrap();
-                        return Ok(ret);
-                    }
-                },
-                None => {
-                    eprint!("todo: method_missing");
-                    return Err(Error::General);
-                }
-            }
-        }
-        _ => {
-            todo!("some day")
+    let mut fn_args = Vec::<Rc<RObject>>::default();
+    for i in args.iter() {
+        if let Some(value) = vm.regs.get(i) {
+            fn_args.push(value.clone());
+        } else {
+            eprintln!("reg not found");
+            return Err(Error::General);
         }
     }
-    // Ok(RObject::Nil)
+
+    mrb_helper::mrb_funcall(vm, recv, sym, &fn_args)
 }
 
 // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L41-L62

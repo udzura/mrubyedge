@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     rite::Error,
-    vm::{Method, RObject, VM},
+    vm::{self, Method, RObject, VM},
 };
 
 // pub fn mrb_get_args<'insn>(vm: &mut VM<'insn>, nr: usize) -> Vec<RObject<'insn>> {
@@ -26,15 +26,20 @@ pub fn mrb_funcall<'insn>(
                         return Ok(Rc::new(ret));
                     }
                     Method::RubyMethod(body) => {
+                        vm::push_callinfo(vm);
+
+                        for (i, obj) in args.iter().enumerate() {
+                            vm.regs.insert(i + 1, obj.clone());
+                        }
+
                         vm.cur_irep = body.clone();
                         vm.eval_insn().unwrap();
 
-                        for (i, arg) in args.iter().enumerate() {
-                            vm.regs.insert(i + 1, arg.clone());
-                        }
-
                         let zero = 0 as usize;
                         let ret = vm.regs.remove(&zero).unwrap();
+
+                        vm::pop_callinfo(vm);
+
                         return Ok(ret);
                     }
                 },

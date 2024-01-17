@@ -17,7 +17,7 @@ pub struct VM<'insn> {
     pub pc: usize,
     pub class_arena: HashMap<usize, Rc<RefCell<RClass<'insn>>>>,
     pub target_class: Option<usize>,
-    pub callinfo_vec: Option<Vec<CallInfo>>,
+    pub callinfo_vec: Vec<CallInfo<'insn>>,
     pub exception: Option<Box<RObject>>,
     pub regs: HashMap<usize, Rc<RObject>>,
 }
@@ -44,7 +44,7 @@ impl<'insn> VM<'insn> {
             pc: 0,
             class_arena,
             target_class: None,
-            callinfo_vec: None,
+            callinfo_vec: Vec::new(),
             exception: None,
             regs: HashMap::new(),
         };
@@ -55,10 +55,16 @@ impl<'insn> VM<'insn> {
     pub fn prelude(&mut self) -> Result<(), Error> {
         let object_class = klass::new_builtin_object_class();
         let object_class = Rc::new(RefCell::new(object_class));
-        self.target_class = Some(object_class.as_ref().borrow().sym_id as usize);
+        let objclass_sym = object_class.as_ref().borrow().sym_id as usize;
+        self.target_class = Some(objclass_sym);
 
         self.class_arena
             .insert(klass::KLASS_SYM_ID_OBJECT as usize, object_class);
+
+        let top_self = RObject::RInstance {
+            class_index: objclass_sym,
+        };
+        self.regs.insert(0, Rc::new(top_self));
 
         Ok(())
     }
@@ -87,6 +93,18 @@ pub fn eval_insn1(
     fetched: &Fetched,
 ) -> Result<(), Error> {
     match opcode {
+        OpCode::MOVE => {
+            if let Fetched::BB(a, b) = fetched {
+                let dst = *a as usize;
+                let src = *b as usize;
+                if let Some(val) = vm.regs.get(&src) {
+                    vm.regs.insert(dst, val.clone());
+                }
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
         OpCode::STRING => {
             if let Fetched::BB(a, b) = fetched {
                 let strval = &irep.pool[*b as usize];
@@ -211,7 +229,7 @@ pub fn eval_insn1(
     Ok(())
 }
 
-pub fn call_func<'insn>(
+fn call_func<'insn>(
     vm: &mut VM<'insn>,
     recv: &RObject,
     sym: String,
@@ -228,6 +246,31 @@ pub fn call_func<'insn>(
     }
 
     mrb_helper::mrb_funcall(vm, recv, sym, &fn_args)
+}
+
+pub fn push_callinfo(vm: &mut VM) {
+    let mut old_regs = HashMap::new();
+    for (k, obj) in vm.regs.iter() {
+        old_regs.insert(*k, obj.clone());
+    }
+    vm.regs.clear();
+
+    let callinfo = CallInfo {
+        cur_regs: old_regs,
+        cur_irep: vm.cur_irep.clone(),
+        target_class: vm.target_class,
+    };
+    vm.callinfo_vec.push(callinfo);
+}
+
+pub fn pop_callinfo(vm: &mut VM) {
+    let callinfo = vm.callinfo_vec.pop().unwrap();
+    for (k, obj) in callinfo.cur_regs.iter() {
+        vm.regs.insert(*k, obj.clone());
+    }
+
+    vm.cur_irep = callinfo.cur_irep.clone();
+    vm.target_class = callinfo.target_class;
 }
 
 // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L41-L62
@@ -338,6 +381,9 @@ pub enum Method<'insn> {
 }
 
 #[derive(Debug)]
-pub struct CallInfo {
+pub struct CallInfo<'insn> {
     // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L111-L126
+    pub cur_regs: HashMap<usize, Rc<RObject>>,
+    pub cur_irep: Rc<VMIrep<'insn>>,
+    pub target_class: Option<usize>,
 }

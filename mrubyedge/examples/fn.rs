@@ -1,9 +1,11 @@
+use std::rc::Rc;
+
 use mrubyedge::{mrb_helper, vm::RObject};
 
 extern crate mrubyedge;
 
 fn main() {
-    let bin = include_bytes!("./def.mrb");
+    let bin = include_bytes!("./def3.mrb");
     let rite = mrubyedge::rite::load(bin).unwrap();
     // dbg!(&rite);
     let mut vm = mrubyedge::vm::VM::open(rite);
@@ -18,10 +20,13 @@ fn main() {
         None => eprintln!("None"),
     }
 
-    let top = 0;
-    let top_self = vm.regs.get(&top).unwrap().clone();
-    let args = vec![];
-    match mrb_helper::mrb_funcall(&mut vm, top_self.as_ref(), "hello".to_string(), &args) {
+    let objclass_sym = vm.target_class.unwrap() as usize;
+    let top_self = RObject::RInstance {
+        class_index: objclass_sym,
+    };
+    let args = vec![Rc::new(RObject::RString("WASM! 4".to_string()))];
+    // let args = vec![];
+    match mrb_helper::mrb_funcall(&mut vm, &top_self, "hello".to_string(), &args) {
         Ok(retval) => {
             dbg!(retval);
         }

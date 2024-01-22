@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies.mrubyedge]
-path = "../mrubyedge"
+version = "0.1.0"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

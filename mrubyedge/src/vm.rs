@@ -120,6 +120,50 @@ pub fn eval_insn1(
 
                 vm.regs.insert(dst, val);
             } else {
+                unreachable!("not B insn")
+            }
+        }
+
+        OpCode::LT => {
+            if let Fetched::BB(a, b) = fetched {
+                let lhs = *a as usize;
+                let rhs = *b as usize;
+
+                let lhs = vm.regs.get(&lhs).unwrap().clone();
+                let rhs = vm.regs.get(&rhs).unwrap().clone();
+
+                if let RObject::RInteger(lhs) = lhs.as_ref() {
+                    if let RObject::RInteger(rhs) = rhs.as_ref() {
+                        let cond = *lhs < *rhs;
+                        vm.regs.insert(*a as usize, Rc::new(RObject::RBool(cond)));
+                        return Ok(());
+                    }
+                }
+
+                unreachable!("type error")
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
+        OpCode::GT => {
+            if let Fetched::BB(a, b) = fetched {
+                let lhs = *a as usize;
+                let rhs = *b as usize;
+
+                let lhs = vm.regs.get(&lhs).unwrap().clone();
+                let rhs = vm.regs.get(&rhs).unwrap().clone();
+
+                if let RObject::RInteger(lhs) = lhs.as_ref() {
+                    if let RObject::RInteger(rhs) = rhs.as_ref() {
+                        let cond = *lhs > *rhs;
+                        vm.regs.insert(*a as usize, Rc::new(RObject::RBool(cond)));
+                        return Ok(());
+                    }
+                }
+
+                unreachable!("type error")
+            } else {
                 unreachable!("not BB insn")
             }
         }
@@ -373,8 +417,7 @@ pub enum RObject {
     RProc { irep_index: usize },
     RInteger(i64),
     RFloat(f64),
-    True,
-    False,
+    RBool(bool),
     Nil,
     // ...
 }

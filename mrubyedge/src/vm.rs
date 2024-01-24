@@ -105,6 +105,25 @@ pub fn eval_insn1(
             }
         }
 
+        OpCode::LOADI_0
+        | OpCode::LOADI_1
+        | OpCode::LOADI_2
+        | OpCode::LOADI_3
+        | OpCode::LOADI_4
+        | OpCode::LOADI_5
+        | OpCode::LOADI_6
+        | OpCode::LOADI_7 => {
+            if let Fetched::B(a) = fetched {
+                let dst = *a as usize;
+                let val = (*opcode as i64) - (OpCode::LOADI_0 as i64);
+                let val = Rc::new(RObject::RInteger(val));
+
+                vm.regs.insert(dst, val);
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
         OpCode::STRING => {
             if let Fetched::BB(a, b) = fetched {
                 let strval = &irep.pool[*b as usize];
@@ -352,6 +371,8 @@ pub enum RObject {
     RInstance { class_index: usize },
     RString(String),
     RProc { irep_index: usize },
+    RInteger(i64),
+    RFloat(f64),
     True,
     False,
     Nil,

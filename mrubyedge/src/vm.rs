@@ -162,6 +162,39 @@ pub fn eval_insn1(
             unreachable!("not BB insn")
         }
 
+        OpCode::SUBI => {
+            if let Fetched::BB(a, b) = fetched {
+                let dst = *a as usize;
+                let val = *b as i64;
+                let target = vm.regs.remove(&dst).unwrap();
+
+                if let RObject::RInteger(orig) = target.as_ref() {
+                    let ans = *orig - val;
+                    vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
+                    return Ok(());
+                }
+            }
+            unreachable!("not BB insn")
+        }
+
+        OpCode::ADD => {
+            if let Fetched::B(a) = fetched {
+                let dst = *a as usize;
+                let dst2 = dst + 1;
+                let target = vm.regs.remove(&dst).unwrap();
+                let target2 = vm.regs.get(&dst2).unwrap().clone();
+
+                if let RObject::RInteger(t1) = target.as_ref() {
+                    if let RObject::RInteger(t2) = target2.as_ref() {
+                        let ans = *t1 + *t2;
+                        vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
+                        return Ok(());
+                    }
+                }
+            }
+            unreachable!("not B insn")
+        }
+
         OpCode::LOADI_0
         | OpCode::LOADI_1
         | OpCode::LOADI_2

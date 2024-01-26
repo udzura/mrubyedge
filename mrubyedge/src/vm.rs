@@ -105,6 +105,18 @@ pub fn eval_insn1(
             }
         }
 
+        OpCode::LOADI => {
+            if let Fetched::BB(a, b) = fetched {
+                let dst = *a as usize;
+                let val = *b;
+                let val = Rc::new(RObject::RInteger(val as i64));
+
+                vm.regs.insert(dst, val);
+            } else {
+                unreachable!("not BB insn")
+            }
+        }
+
         OpCode::LOADI_0
         | OpCode::LOADI_1
         | OpCode::LOADI_2
@@ -125,9 +137,9 @@ pub fn eval_insn1(
         }
 
         OpCode::LT => {
-            if let Fetched::BB(a, b) = fetched {
+            if let Fetched::B(a) = fetched {
                 let lhs = *a as usize;
-                let rhs = *b as usize;
+                let rhs = lhs + 1;
 
                 let lhs = vm.regs.get(&lhs).unwrap().clone();
                 let rhs = vm.regs.get(&rhs).unwrap().clone();
@@ -147,9 +159,9 @@ pub fn eval_insn1(
         }
 
         OpCode::GT => {
-            if let Fetched::BB(a, b) = fetched {
+            if let Fetched::B(a) = fetched {
                 let lhs = *a as usize;
-                let rhs = *b as usize;
+                let rhs = lhs + 1;
 
                 let lhs = vm.regs.get(&lhs).unwrap().clone();
                 let rhs = vm.regs.get(&rhs).unwrap().clone();

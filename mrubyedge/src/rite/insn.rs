@@ -418,7 +418,7 @@ fn fetch_bs(bin: &mut &[u8]) -> Result<Fetched, Error> {
         return Err(Error::TooShort);
     }
     let a = bin[1];
-    let s = ((bin[2] as u16) << 8) & bin[3] as u16;
+    let s = ((bin[2] as u16) << 8) | bin[3] as u16;
     let operand = Fetched::BS(a, s);
 
     *bin = &bin[4..];
@@ -429,8 +429,8 @@ fn fetch_bss(bin: &mut &[u8]) -> Result<Fetched, Error> {
         return Err(Error::TooShort);
     }
     let a = bin[1];
-    let s1 = ((bin[2] as u16) << 8) & bin[3] as u16;
-    let s2 = ((bin[2] as u16) << 8) & bin[5] as u16;
+    let s1 = ((bin[2] as u16) << 8) | bin[3] as u16;
+    let s2 = ((bin[2] as u16) << 8) | bin[5] as u16;
     let operand = Fetched::BSS(a, s1, s2);
 
     *bin = &bin[6..];
@@ -440,7 +440,7 @@ fn fetch_s(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 3 {
         return Err(Error::TooShort);
     }
-    let s = ((bin[1] as u16) << 8) & bin[2] as u16;
+    let s = ((bin[1] as u16) << 8) | bin[2] as u16;
     let operand = Fetched::S(s);
 
     *bin = &bin[3..];
@@ -450,7 +450,7 @@ fn fetch_w(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 4 {
         return Err(Error::TooShort);
     }
-    let w = ((bin[1] as u32) << 16) & ((bin[2] as u32) << 8) & bin[3] as u32;
+    let w = ((bin[1] as u32) << 16) | ((bin[2] as u32) << 8) | bin[3] as u32;
     let operand = Fetched::W(w);
 
     *bin = &bin[4..];

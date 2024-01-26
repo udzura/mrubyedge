@@ -71,15 +71,16 @@ impl<'insn> VM<'insn> {
 
     pub fn eval_insn(&mut self) -> Result<(), Error> {
         let cur_irep = self.cur_irep.clone();
-        let mut insns = cur_irep.as_ref().inst_head;
-        while insns.len() > 0 {
+        let len = cur_irep.as_ref().inst_head.len();
+        while self.pc < len {
+            let mut insns = &cur_irep.as_ref().inst_head[self.pc..];
             let op = insns[0];
             let opcode: OpCode = op.try_into()?;
+            let before_len = insns.len();
             let fetched = insn::FETCH_TABLE[op as usize](&mut insns)?;
+            let insn_len = before_len - insns.len();
             // println!("insn: {:?} {:?}", opcode, fetched);
-            eval_insn1(self, cur_irep.as_ref(), &opcode, &fetched)?;
-
-            self.pc = self.cur_irep.ilen - insns.len();
+            eval_insn1(self, cur_irep.as_ref(), &opcode, &fetched, insn_len)?;
         }
 
         Ok(())
@@ -91,7 +92,10 @@ pub fn eval_insn1(
     irep: &VMIrep,
     opcode: &OpCode,
     fetched: &Fetched,
+    ilen: usize,
 ) -> Result<(), Error> {
+    vm.pc += ilen;
+
     match opcode {
         OpCode::MOVE => {
             if let Fetched::BB(a, b) = fetched {
@@ -115,6 +119,47 @@ pub fn eval_insn1(
             } else {
                 unreachable!("not BB insn")
             }
+        }
+
+        OpCode::JMP => {
+            if let Fetched::S(a) = fetched {
+                let off = *a as usize;
+                vm.pc += off;
+            } else {
+                unreachable!("not B insn")
+            }
+        }
+
+        OpCode::JMPIF => {
+            if let Fetched::BS(a, b) = fetched {
+                let cond = *a as usize;
+                let off = *b as usize;
+                let cond = vm.regs.get(&cond).unwrap().clone();
+
+                if let RObject::RBool(cond) = cond.as_ref() {
+                    if *cond {
+                        vm.pc += off;
+                    }
+                    return Ok(());
+                }
+            }
+            unreachable!("not BB insn")
+        }
+
+        OpCode::JMPNOT => {
+            if let Fetched::BS(a, b) = fetched {
+                let cond = *a as usize;
+                let off = *b as usize;
+                let cond = vm.regs.get(&cond).unwrap().clone();
+
+                if let RObject::RBool(cond) = cond.as_ref() {
+                    if !(*cond) {
+                        vm.pc += off;
+                    }
+                    return Ok(());
+                }
+            }
+            unreachable!("not BB insn")
         }
 
         OpCode::LOADI_0
@@ -331,11 +376,13 @@ pub fn push_callinfo(vm: &mut VM) {
     vm.regs.clear();
 
     let callinfo = CallInfo {
+        cur_pc: vm.pc,
         cur_regs: old_regs,
         cur_irep: vm.cur_irep.clone(),
         target_class: vm.target_class,
     };
     vm.callinfo_vec.push(callinfo);
+    vm.pc = 0;
 }
 
 pub fn pop_callinfo(vm: &mut VM) {
@@ -346,6 +393,7 @@ pub fn pop_callinfo(vm: &mut VM) {
 
     vm.cur_irep = callinfo.cur_irep.clone();
     vm.target_class = callinfo.target_class;
+    vm.pc = callinfo.cur_pc;
 }
 
 // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L41-L62
@@ -459,6 +507,7 @@ pub enum Method<'insn> {
 #[derive(Debug)]
 pub struct CallInfo<'insn> {
     // https://github.com/mrubyc/mrubyc/blob/5fab2b85dce8fc0780293235df6c0daa5fd57dce/src/vm.h#L111-L126
+    pub cur_pc: usize,
     pub cur_regs: HashMap<usize, Rc<RObject>>,
     pub cur_irep: Rc<VMIrep<'insn>>,
     pub target_class: Option<usize>,

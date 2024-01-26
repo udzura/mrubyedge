@@ -529,7 +529,7 @@ pub struct RMethod<'insn> {
     pub body: Method<'insn>,
 }
 
-type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject>]) -> RObject;
+type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject>]) -> Rc<RObject>;
 
 #[derive(Debug)]
 pub enum Method<'insn> {

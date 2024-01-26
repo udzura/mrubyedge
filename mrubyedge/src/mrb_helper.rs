@@ -23,7 +23,7 @@ pub fn mrb_funcall<'insn>(
                 Some(method) => match &method.body {
                     Method::CMethod(func) => {
                         let ret = func(vm, args);
-                        return Ok(Rc::new(ret));
+                        return Ok(ret);
                     }
                     Method::RubyMethod(body) => {
                         vm::push_callinfo(vm);

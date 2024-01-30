@@ -3,5 +3,5 @@ resolver = "2"
 
 members = [
     "mruby-objdump",
-    "mrubyedge", "wasmsample",
+    "mrubyedge", "wasmsample", "mec",
 ]

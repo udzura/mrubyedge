@@ -10,6 +10,6 @@ crate-type = ["cdylib", "rlib"]
 # path = "../mrubyedge"
 version = "0.1.0"
 
-[profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
+# [profile.release]
+# # Tell `rustc` to optimize for small code size.
+# opt-level = "s"

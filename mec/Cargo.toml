@@ -10,4 +10,4 @@ license = "BSD-3-Clause"
 
 [dependencies]
 rand = "0.8.5"
-run_shell = "0.1.13"
+nom = "7.1.3"

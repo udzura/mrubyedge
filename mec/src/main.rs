@@ -1,10 +1,34 @@
 #![feature(path_file_prefix)]
 
-#[macro_use]
-extern crate run_shell;
 extern crate rand;
 
+use std::process::Command;
+
 use rand::distributions::{Alphanumeric, DistString};
+
+fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("running: `{}`", sharg);
+    let out = Command::new("/bin/sh").args(["-c", sharg]).output()?;
+    if out.stdout.len() != 0 {
+        println!(
+            "stdout:\n{}",
+            String::from_utf8_lossy(&out.stdout).to_string().trim()
+        );
+    }
+    if out.stderr.len() != 0 {
+        println!(
+            "stderr:\n{}",
+            String::from_utf8_lossy(&out.stderr).to_string().trim()
+        );
+    }
+    println!("{:?}", out.status);
+
+    if !out.status.success() {
+        panic!("failed to execute command");
+    }
+
+    Ok(())
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
@@ -41,51 +65,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pwd = std::env::current_dir()?;
     std::env::set_current_dir(std::env::var("TMPDIR").unwrap_or("/tmp".to_string()))?;
 
-    cmd!(
+    sh_do(&format!(
         "git clone https://github.com/udzura/mrubyedge-template-rs.git work-mrubyedge-{}",
         &suffix
-    )
-    .run()
-    .unwrap();
+    ))?;
     std::env::set_current_dir(format!("./work-mrubyedge-{}", &suffix))?;
-    cmd!("mkdir tmp").run().unwrap();
-    cmd!("cp {} src/", mrubyfile.to_str().unwrap())
-        .run()
-        .unwrap();
-    cmd!("mrbc --verbose src/{}.rb", &fname.to_string())
-        .run()
-        .unwrap();
-    cmd!(&format!(
+    sh_do("mkdir tmp")?;
+    sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()))?;
+    sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()))?;
+    sh_do(&format!(
         "sed -i.bak \"s/@@FILENAME_BASE@@/{}/g\" src/lib.rs.tmpl",
         fname.to_string()
-    ))
-    .run()
-    .unwrap();
-    cmd!(&format!(
+    ))?;
+    sh_do(&format!(
         "sed -i.bak \"s/@@FUNKNAME@@/{}/g\" src/lib.rs.tmpl",
         &fnname
-    ))
-    .run()
-    .unwrap();
-    cmd!("cp -f src/lib.rs.tmpl src/lib.rs").run().unwrap();
-    cmd!("rustup override set nightly").run().unwrap();
-    cmd!("cargo build --target wasm32-wasi --release")
-        .run()
-        .unwrap();
-    cmd!(&format!(
+    ))?;
+    sh_do("cp -f src/lib.rs.tmpl src/lib.rs")?;
+    sh_do("rustup override set nightly")?;
+    sh_do("cargo build --target wasm32-wasi --release")?;
+    sh_do(&format!(
         "cp -v ./target/wasm32-wasi/release/mywasm.wasm {}/{}.wasm",
         &pwd.to_str().unwrap(),
         &fname.to_string()
-    ))
-    .run()
-    .unwrap();
-    cmd!(&format!(
-        "sh -c \"cd .. && rm -rf work-mrubyedge-{}\"",
-        &suffix
-    ))
-    .run()
-    .unwrap();
+    ))?;
+    sh_do(&format!("cd .. && rm -rf work-mrubyedge-{}", &suffix))?;
 
     std::env::set_current_dir(pwd)?;
+
+    println!("[ok] wasm file is generated: {}.wasm", &fname);
+
     Ok(())
 }

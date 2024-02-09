@@ -1,19 +1,18 @@
 use mec::rbs_parser::*;
 
 fn main() {
-    let ret = parse("def hoge: (String) -> Integer");
-    let ftype = ret.unwrap().1;
-    dbg!(ftype);
+    let def = "
+def hoge: (String) -> Integer
+def foo_bar: (Integer, Integer) -> Integer
 
-    let ret = parse("def foo_bar: (Integer, Integer) -> Integer");
-    let ftype = ret.unwrap().1;
-    dbg!(ftype);
+def fooBar: (Integer, Float, Integer) -> void
 
-    let ret = parse("def fooBar: (Integer, Float, Integer) -> void");
-    let ftype = ret.unwrap().1;
-    dbg!(ftype);
+def poyo123: () -> void
+";
 
-    let ret = parse("def poyo123: () -> void");
-    let ftype = ret.unwrap().1;
+    let ret = parse(def).unwrap();
+    let rest = ret.0;
+    let ftype = ret.1;
     dbg!(ftype);
+    dbg!(rest);
 }

@@ -8,12 +8,13 @@ pub struct FuncDef {
 }
 
 use nom::branch::alt;
+use nom::branch::permutation;
 use nom::bytes::complete::tag;
 use nom::character::complete::*;
 // use nom::combinator::opt;
 use nom::error::context;
 use nom::error::VerboseError;
-use nom::multi::many0;
+use nom::multi::*;
 use nom::sequence::tuple;
 use nom::IResult;
 
@@ -79,7 +80,7 @@ fn fntype(input: &str) -> Res<&str, (Vec<String>, String)> {
     tuple((arg, space0, ret))(input).map(|(s, (arg, _, ret))| (s, (arg, ret)))
 }
 
-pub fn parse(input: &str) -> Res<&str, FuncDef> {
+pub fn fn_def(input: &str) -> Res<&str, FuncDef> {
     tuple((def, space1, method, fntype))(input).map(|(s, (_, _, name, (argstype, rettype)))| {
         (
             s,
@@ -90,4 +91,12 @@ pub fn parse(input: &str) -> Res<&str, FuncDef> {
             },
         )
     })
+}
+
+pub fn parse(input: &str) -> Res<&str, Vec<FuncDef>> {
+    tuple((
+        multispace0,
+        separated_list0(permutation((space0, many1(char('\n')), space0)), fn_def),
+    ))(input)
+    .map(|(s, (_, list))| (s, list))
 }

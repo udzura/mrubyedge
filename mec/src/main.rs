@@ -4,7 +4,10 @@ extern crate rand;
 
 use std::process::Command;
 
+use askama::Template;
 use rand::distributions::{Alphanumeric, DistString};
+
+use mec::template::{CargoToml, LibRs};
 
 fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("running: `{}`", sharg);
@@ -65,23 +68,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pwd = std::env::current_dir()?;
     std::env::set_current_dir(std::env::var("TMPDIR").unwrap_or("/tmp".to_string()))?;
 
-    sh_do(&format!(
-        "git clone https://github.com/udzura/mrubyedge-template-rs.git work-mrubyedge-{}",
-        &suffix
-    ))?;
+    let dirname = format!("work-mrubyedge-{}", suffix);
+    std::fs::create_dir(&dirname)?;
     std::env::set_current_dir(format!("./work-mrubyedge-{}", &suffix))?;
-    sh_do("mkdir tmp")?;
+    std::fs::create_dir("src")?;
+
     sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()))?;
     sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()))?;
-    sh_do(&format!(
-        "sed -i.bak \"s/@@FILENAME_BASE@@/{}/g\" src/lib.rs.tmpl",
-        fname.to_string()
-    ))?;
-    sh_do(&format!(
-        "sed -i.bak \"s/@@FUNKNAME@@/{}/g\" src/lib.rs.tmpl",
-        &fnname
-    ))?;
-    sh_do("cp -f src/lib.rs.tmpl src/lib.rs")?;
+
+    let cargo_toml = CargoToml {
+        mrubyedge_version: "0.1.1",
+    };
+    std::fs::write("Cargo.toml", cargo_toml.render()?)?;
+
+    let lib_rs = LibRs {
+        func_name: &fnname,
+        file_basename: &fname,
+    };
+    std::fs::write("src/lib.rs", lib_rs.render()?)?;
+
     sh_do("rustup override set nightly")?;
     sh_do("cargo build --target wasm32-wasi --release")?;
     sh_do(&format!(

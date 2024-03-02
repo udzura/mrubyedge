@@ -11,3 +11,4 @@ license = "BSD-3-Clause"
 [dependencies]
 rand = "0.8.5"
 nom = "7.1.3"
+askama = "0.12.1"

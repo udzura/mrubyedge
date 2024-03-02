@@ -3,10 +3,11 @@ extern crate mrubyedge;
 use mrubyedge::{mrb_helper, vm::RObject};
 
 const DATA: &'static [u8] = include_bytes!("./{{ file_basename }}.mrb");
-const FNNAME: &'static str = "{{ func_name }}";
+
+{% for fn in ftypes %}
 
 #[no_mangle]
-pub fn {{ func_name }}() {
+pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     let rite = mrubyedge::rite::load(DATA).unwrap();
     let mut vm = mrubyedge::vm::VM::open(rite);
     vm.prelude().unwrap();
@@ -16,17 +17,19 @@ pub fn {{ func_name }}() {
     let top_self = RObject::RInstance {
         class_index: objclass_sym,
     };
-    let args = vec![];
+    let args = {{ fn.args_let_vec }};
 
-    match mrb_helper::mrb_funcall(&mut vm, &top_self, FNNAME.to_string(), &args) {
+    match mrb_helper::mrb_funcall(&mut vm, &top_self, "{{ fn.func_name }}".to_string(), &args) {
         Ok(retval) => {
             eprintln!("{:?}", retval);
         }
         Err(ex) => {
             dbg!(ex);
+	    panic!("mruby error");
         }
     };
 
-    ()
+    {{ fn.rettype_convert }}
 }
 
+{% endfor %}

@@ -80,10 +80,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mrubyedge_version: "0.1.1",
     };
     std::fs::write("Cargo.toml", cargo_toml.render()?)?;
+    let ftypes = vec![mec::template::RustFnTemplate {
+        func_name: &fnname,
+        args_decl: "a: i32",
+        args_let_vec: "vec![std::rc::Rc::new(RObject::RInteger(a as i64))]",
+        rettype_decl: "-> i32",
+        rettype_convert: "0",
+    }];
 
     let lib_rs = LibRs {
-        func_name: &fnname,
         file_basename: &fname,
+        ftypes: &&ftypes,
     };
     std::fs::write("src/lib.rs", lib_rs.render()?)?;
 

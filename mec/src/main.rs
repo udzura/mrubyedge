@@ -76,13 +76,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     std::fs::write("Cargo.toml", cargo_toml.render()?)?;
 
-    let import_rbs_fname = format!("{}.import.rbs", fname);
+    let import_rbs_fname = format!("{}.export.rbs", fname);
     let import_rbs = mrubyfile.parent().unwrap().join(&import_rbs_fname);
-    let mut cont = String::new();
+    let cont: String;
 
     if import_rbs.exists() {
         eprintln!(
-            "detected import.rbs: {}",
+            "detected export.rbs: {}",
             import_rbs.as_path().to_string_lossy()
         );
         let mut f = File::open(import_rbs)?;
@@ -107,6 +107,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rendered = lib_rs.render()?;
         cont = rendered;
     } else {
+        if fnname.is_empty() {
+            panic!("--fnname FNNAME should be specified when export.rbs does not exist")
+        }
+
         let ftypes = vec![mec::template::RustFnTemplate {
             func_name: &fnname,
             args_decl: "",

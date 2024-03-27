@@ -24,9 +24,8 @@ fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
             String::from_utf8_lossy(&out.stderr).to_string().trim()
         );
     }
-    println!("{:?}", out.status);
-
     if !out.status.success() {
+        println!("{:?}", out.status);
         panic!("failed to execute command");
     }
 
@@ -92,12 +91,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         file_basename: &fname,
         ftypes: &&ftypes,
     };
-    std::fs::write("src/lib.rs", lib_rs.render()?)?;
+    let cont = lib_rs.render()?;
+    println!("[debug] will generate main.rs:");
+    println!("{}", &cont);
+    std::fs::write("src/lib.rs", cont)?;
 
-    sh_do("rustup override set nightly")?;
+    sh_do("rustup override set nightly 2>/dev/null")?;
     sh_do("cargo build --target wasm32-wasi --release")?;
     sh_do(&format!(
-        "cp -v ./target/wasm32-wasi/release/mywasm.wasm {}/{}.wasm",
+        "cp ./target/wasm32-wasi/release/mywasm.wasm {}/{}.wasm",
         &pwd.to_str().unwrap(),
         &fname.to_string()
     ))?;

@@ -91,11 +91,11 @@ pub enum RObject {
     // ...
 }
 
-impl TryFrom<RObject> for i32 {
+impl TryFrom<&RObject> for i32 {
     type Error = Error;
 
-    fn try_from(value: RObject) -> Result<Self, Self::Error> {
-        match &value {
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value {
             RObject::RInteger(i) => Ok(*i as i32),
             RObject::RBool(b) => {
                 if *b {
@@ -110,11 +110,11 @@ impl TryFrom<RObject> for i32 {
     }
 }
 
-impl TryFrom<RObject> for f32 {
+impl TryFrom<&RObject> for f32 {
     type Error = Error;
 
-    fn try_from(value: RObject) -> Result<Self, Self::Error> {
-        match &value {
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value {
             RObject::RInteger(i) => Ok(*i as f32),
             RObject::RBool(b) => {
                 if *b {
@@ -129,21 +129,21 @@ impl TryFrom<RObject> for f32 {
     }
 }
 
-impl TryFrom<RObject> for String {
+impl TryFrom<&RObject> for String {
     type Error = Error;
 
-    fn try_from(value: RObject) -> Result<Self, Self::Error> {
-        match &value {
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value {
             RObject::RString(s) => Ok(s.to_owned()),
             v => Ok(format!("{:?}", v)),
         }
     }
 }
 
-impl TryFrom<RObject> for () {
+impl TryFrom<&RObject> for () {
     type Error = Error;
 
-    fn try_from(_: RObject) -> Result<Self, Self::Error> {
+    fn try_from(_: &RObject) -> Result<Self, Self::Error> {
         Ok(())
     }
 }

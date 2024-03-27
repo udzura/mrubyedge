@@ -13,7 +13,10 @@ fn main() {
     eprintln!("return value:");
     let top = 0 as usize;
     match vm.regs.get(&top) {
-        Some(v) => eprintln!("{:?}", v),
+        Some(v) => {
+            eprintln!("{:?}", v);
+            eprintln!("{:?}", TryInto::<i32>::try_into(v.as_ref()).unwrap());
+        }
         None => eprintln!("None"),
     }
 

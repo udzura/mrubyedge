@@ -22,15 +22,13 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
 
     match &retval {
         Ok(retval) => {
-            eprintln!("{:?}", retval);
+	    retval.as_ref().try_into().unwrap()
         }
         Err(ex) => {
             dbg!(ex);
             panic!("mruby error");
         }
-    };
-
-    retval.unwrap().as_ref().cloned().try_into().unwrap()
+    }
 }
 
 {% endfor %}

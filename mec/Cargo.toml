@@ -8,8 +8,7 @@ license = "BSD-3-Clause"
 include = [
     "**/*.rs",
     "Cargo.toml",
-    "/templates/*.toml",
-    "/templates/*.tmpl",
+    "templates/*",
 ]
 
 [dependencies]

@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()))?;
 
     let cargo_toml = CargoToml {
-        mrubyedge_version: "0.1.1",
+        mrubyedge_version: "0.1.2",
     };
     std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     let ftypes = vec![mec::template::RustFnTemplate {

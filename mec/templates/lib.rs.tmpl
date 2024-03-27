@@ -18,18 +18,19 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
         class_index: objclass_sym,
     };
     let args = {{ fn.args_let_vec }};
+    let retval = mrb_helper::mrb_funcall(&mut vm, &top_self, "{{ fn.func_name }}".to_string(), &args);
 
-    match mrb_helper::mrb_funcall(&mut vm, &top_self, "{{ fn.func_name }}".to_string(), &args) {
+    match &retval {
         Ok(retval) => {
             eprintln!("{:?}", retval);
         }
         Err(ex) => {
             dbg!(ex);
-	    panic!("mruby error");
+            panic!("mruby error");
         }
     };
 
-    {{ fn.rettype_convert }}
+    retval.try_into().unwrap()
 }
 
 {% endfor %}

@@ -84,7 +84,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         args_decl: "a: i32",
         args_let_vec: "vec![std::rc::Rc::new(RObject::RInteger(a as i64))]",
         rettype_decl: "-> i32",
-        rettype_convert: "0",
     }];
 
     let lib_rs = LibRs {

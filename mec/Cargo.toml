@@ -6,7 +6,11 @@ authors = ["Uchio Kondo <udzura@udzura.jp>"]
 description = "mruby/edge compiler cli endpoint"
 license = "BSD-3-Clause"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+    "templates/*"
+]
 
 [dependencies]
 rand = "0.8.5"

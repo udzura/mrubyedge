@@ -5,11 +5,11 @@ edition = "2021"
 authors = ["Uchio Kondo <udzura@udzura.jp>"]
 description = "mruby/edge compiler cli endpoint"
 license = "BSD-3-Clause"
-
 include = [
     "**/*.rs",
     "Cargo.toml",
-    "templates/*"
+    "/templates/*.toml",
+    "/templates/*.tmpl",
 ]
 
 [dependencies]

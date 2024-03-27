@@ -14,6 +14,7 @@ pub enum Error {
     TooShort,
     InvalidFormat,
     InvalidOpCode,
+    TypeMismatch,
 }
 
 impl fmt::Display for Error {

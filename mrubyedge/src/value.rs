@@ -1,4 +1,4 @@
-use crate::rite::{self, Irep};
+use crate::rite::{self, Error, Irep};
 use crate::vm::VM;
 
 use std::collections::HashMap;
@@ -89,6 +89,63 @@ pub enum RObject {
     RBool(bool),
     Nil,
     // ...
+}
+
+impl TryFrom<RObject> for i32 {
+    type Error = Error;
+
+    fn try_from(value: RObject) -> Result<Self, Self::Error> {
+        match &value {
+            RObject::RInteger(i) => Ok(*i as i32),
+            RObject::RBool(b) => {
+                if *b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RObject::RFloat(f) => return Ok(*f as i32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<RObject> for f32 {
+    type Error = Error;
+
+    fn try_from(value: RObject) -> Result<Self, Self::Error> {
+        match &value {
+            RObject::RInteger(i) => Ok(*i as f32),
+            RObject::RBool(b) => {
+                if *b {
+                    Ok(1.0)
+                } else {
+                    Ok(0.0)
+                }
+            }
+            RObject::RFloat(f) => return Ok(*f as f32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<RObject> for String {
+    type Error = Error;
+
+    fn try_from(value: RObject) -> Result<Self, Self::Error> {
+        match &value {
+            RObject::RString(s) => Ok(s.to_owned()),
+            v => Ok(format!("{:?}", v)),
+        }
+    }
+}
+
+impl TryFrom<RObject> for () {
+    type Error = Error;
+
+    fn try_from(_: RObject) -> Result<Self, Self::Error> {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

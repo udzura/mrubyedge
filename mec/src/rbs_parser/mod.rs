@@ -7,6 +7,54 @@ pub struct FuncDef {
     pub rettype: String,
 }
 
+impl FuncDef {
+    pub fn args_decl(&self) -> &str {
+        if self.argstype.len() == 0 {
+            return "";
+        }
+
+        match self.argstype.get(0) {
+            Some(v) => match v.as_str() {
+                "Integer" => "a: i32",
+                _ => {
+                    unimplemented!("unsupported arg type")
+                }
+            },
+            _ => {
+                unreachable!("to be checked argsize")
+            }
+        }
+    }
+
+    pub fn args_let_vec(&self) -> &str {
+        if self.argstype.len() == 0 {
+            return "vec![]";
+        }
+
+        match self.argstype.get(0) {
+            Some(v) => match v.as_str() {
+                "Integer" => "vec![std::rc::Rc::new(RObject::RInteger(a as i64))]",
+                _ => {
+                    unimplemented!("unsupported arg type")
+                }
+            },
+            _ => {
+                unreachable!("to be checked argsize")
+            }
+        }
+    }
+
+    pub fn rettype_decl(&self) -> &str {
+        match self.rettype.as_str() {
+            "void" => "-> ()",
+            "Integer" => "-> i32",
+            _ => {
+                unimplemented!("unsupported arg type")
+            }
+        }
+    }
+}
+
 use nom::branch::alt;
 use nom::branch::permutation;
 use nom::bytes::complete::tag;

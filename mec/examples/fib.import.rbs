@@ -1,0 +1,2 @@
+def fib: (Integer) -> Integer
+def hello: () -> void

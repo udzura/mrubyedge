@@ -2,7 +2,7 @@
 
 extern crate rand;
 
-use std::process::Command;
+use std::{fs::File, io::Read, process::Command};
 
 use askama::Template;
 use rand::distributions::{Alphanumeric, DistString};
@@ -57,10 +57,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         panic!("invalid argument. usage: mec --fnname FNNAME FILE.rb")
     }
 
-    if fnname.is_empty() {
-        panic!("invalid argument. usage: mec --fnname FNNAME FILE.rb")
-    }
-
     let mrubyfile = std::fs::canonicalize(last_matched)?;
     let fname = mrubyfile.as_path().file_prefix().unwrap().to_string_lossy();
 
@@ -79,18 +75,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         mrubyedge_version: "0.1.3",
     };
     std::fs::write("Cargo.toml", cargo_toml.render()?)?;
-    let ftypes = vec![mec::template::RustFnTemplate {
-        func_name: &fnname,
-        args_decl: "a: i32",
-        args_let_vec: "vec![std::rc::Rc::new(RObject::RInteger(a as i64))]",
-        rettype_decl: "-> i32",
-    }];
 
-    let lib_rs = LibRs {
-        file_basename: &fname,
-        ftypes: &&ftypes,
-    };
-    let cont = lib_rs.render()?;
+    let import_rbs_fname = format!("{}.import.rbs", fname);
+    let import_rbs = mrubyfile.parent().unwrap().join(&import_rbs_fname);
+    let mut cont = String::new();
+
+    if import_rbs.exists() {
+        eprintln!(
+            "detected import.rbs: {}",
+            import_rbs.as_path().to_string_lossy()
+        );
+        let mut f = File::open(import_rbs)?;
+        let mut s = String::new();
+        f.read_to_string(&mut s)?;
+
+        let (_, parsed) = mec::rbs_parser::parse(&s).unwrap();
+        let mut ftypes = vec![];
+        for def in parsed.iter() {
+            ftypes.push(mec::template::RustFnTemplate {
+                func_name: &def.name,
+                args_decl: def.args_decl(),
+                args_let_vec: def.args_let_vec(),
+                rettype_decl: def.rettype_decl(),
+            })
+        }
+
+        let lib_rs = LibRs {
+            file_basename: &fname,
+            ftypes: &&ftypes,
+        };
+        let rendered = lib_rs.render()?;
+        cont = rendered;
+    } else {
+        let ftypes = vec![mec::template::RustFnTemplate {
+            func_name: &fnname,
+            args_decl: "",
+            args_let_vec: "vec![]",
+            rettype_decl: "-> ()",
+        }];
+
+        let lib_rs = LibRs {
+            file_basename: &fname,
+            ftypes: &&ftypes,
+        };
+        let rendered = lib_rs.render()?;
+        cont = rendered;
+    }
     println!("[debug] will generate main.rs:");
     println!("{}", &cont);
     std::fs::write("src/lib.rs", cont)?;

@@ -1,0 +1,1 @@
+def plus: (Integer, Integer) -> Integer

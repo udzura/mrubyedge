@@ -13,17 +13,18 @@ impl FuncDef {
             return "";
         }
 
-        match self.argstype.get(0) {
-            Some(v) => match v.as_str() {
-                "Integer" => "a: i32",
+        let converted: Vec<String> = self
+            .argstype
+            .iter()
+            .enumerate()
+            .map(|(idx, arg)| match arg.as_str() {
+                "Integer" => format!("a{}: i32", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
                 }
-            },
-            _ => {
-                unreachable!("to be checked argsize")
-            }
-        }
+            })
+            .collect();
+        converted.join(", ").leak()
     }
 
     pub fn args_let_vec(&self) -> &str {
@@ -31,17 +32,18 @@ impl FuncDef {
             return "vec![]";
         }
 
-        match self.argstype.get(0) {
-            Some(v) => match v.as_str() {
-                "Integer" => "vec![std::rc::Rc::new(RObject::RInteger(a as i64))]",
+        let converted: Vec<String> = self
+            .argstype
+            .iter()
+            .enumerate()
+            .map(|(idx, arg)| match arg.as_str() {
+                "Integer" => format!("std::rc::Rc::new(RObject::RInteger(a{} as i64))", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
                 }
-            },
-            _ => {
-                unreachable!("to be checked argsize")
-            }
-        }
+            })
+            .collect();
+        format!("vec![{}]", converted.join(", ")).leak()
     }
 
     pub fn rettype_decl(&self) -> &str {

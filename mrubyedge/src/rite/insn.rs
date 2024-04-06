@@ -14,6 +14,66 @@ pub enum Fetched {
     W(u32), // u24 in real layout
 }
 
+type FetchResult<Res> = Result<Res, Error>;
+
+impl Fetched {
+    pub fn as_z(self) -> FetchResult<()> {
+        match self {
+            Fetched::Z => Ok(()),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_b(self) -> FetchResult<u8> {
+        match self {
+            Fetched::B(a) => Ok(a),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_bb(self) -> FetchResult<(u8, u8)> {
+        match self {
+            Fetched::BB(a, b) => Ok((a, b)),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_bbb(self) -> FetchResult<(u8, u8, u8)> {
+        match self {
+            Fetched::BBB(a, b, c) => Ok((a, b, c)),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_bs(self) -> FetchResult<(u8, u16)> {
+        match self {
+            Fetched::BS(a, b) => Ok((a, b)),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_bss(self) -> FetchResult<(u8, u16, u16)> {
+        match self {
+            Fetched::BSS(a, b, c) => Ok((a, b, c)),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_s(self) -> FetchResult<u16> {
+        match self {
+            Fetched::S(s) => Ok(s),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+
+    pub fn as_w(self) -> FetchResult<u32> {
+        match self {
+            Fetched::W(w) => Ok(w),
+            _ => Err(Error::InvalidOperand),
+        }
+    }
+}
+
 // from mruby 3.2.0 op.h
 // OPCODE(NOP,        Z)        /* no operation */
 // OPCODE(MOVE,       BB)       /* R[a] = R[b] */

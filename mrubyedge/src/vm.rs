@@ -98,101 +98,84 @@ pub fn eval_insn1(
 
     match opcode {
         OpCode::MOVE => {
-            if let Fetched::BB(a, b) = fetched {
-                let dst = *a as usize;
-                let src = *b as usize;
-                if let Some(val) = vm.regs.get(&src) {
-                    vm.regs.insert(dst, val.clone());
-                }
-            } else {
-                unreachable!("not BB insn")
+            let (a, b) = fetched.as_bb()?;
+            let dst = a as usize;
+            let src = b as usize;
+            if let Some(val) = vm.regs.get(&src) {
+                vm.regs.insert(dst, val.clone());
             }
         }
 
         OpCode::LOADI => {
-            if let Fetched::BB(a, b) = fetched {
-                let dst = *a as usize;
-                let val = *b;
-                let val = Rc::new(RObject::RInteger(val as i64));
+            let (a, b) = fetched.as_bb()?;
+            let dst = a as usize;
+            let val = b;
+            let val = Rc::new(RObject::RInteger(val as i64));
 
-                vm.regs.insert(dst, val);
-            } else {
-                unreachable!("not BB insn")
-            }
+            vm.regs.insert(dst, val);
         }
 
         OpCode::JMP => {
-            if let Fetched::S(a) = fetched {
-                let off = *a as usize;
-                vm.pc += off;
-            } else {
-                unreachable!("not B insn")
-            }
+            let a = fetched.as_s()?;
+            let off = a as usize;
+            vm.pc += off;
         }
 
         OpCode::JMPIF => {
-            if let Fetched::BS(a, b) = fetched {
-                let cond = *a as usize;
-                let off = *b as usize;
-                let cond = vm.regs.get(&cond).unwrap().clone();
+            let (a, b) = fetched.as_bs()?;
+            let cond = a as usize;
+            let off = b as usize;
+            let cond = vm.regs.get(&cond).unwrap().clone();
 
-                if let RObject::RBool(cond) = cond.as_ref() {
-                    if *cond {
-                        vm.pc += off;
-                    }
-                    return Ok(());
+            if let RObject::RBool(cond) = cond.as_ref() {
+                if *cond {
+                    vm.pc += off;
                 }
+                return Ok(());
             }
-            unreachable!("not BB insn")
         }
 
         OpCode::JMPNOT => {
-            if let Fetched::BS(a, b) = fetched {
-                let cond = *a as usize;
-                let off = *b as usize;
-                let cond = vm.regs.get(&cond).unwrap().clone();
+            let (a, b) = fetched.as_bs()?;
+            let cond = a as usize;
+            let off = b as usize;
+            let cond = vm.regs.get(&cond).unwrap().clone();
 
-                if let RObject::RBool(cond) = cond.as_ref() {
-                    if !(*cond) {
-                        vm.pc += off;
-                    }
-                    return Ok(());
+            if let RObject::RBool(cond) = cond.as_ref() {
+                if !(*cond) {
+                    vm.pc += off;
                 }
+                return Ok(());
             }
-            unreachable!("not BB insn")
         }
 
         OpCode::SUBI => {
-            if let Fetched::BB(a, b) = fetched {
-                let dst = *a as usize;
-                let val = *b as i64;
-                let target = vm.regs.remove(&dst).unwrap();
+            let (a, b) = fetched.as_bb()?;
+            let dst = a as usize;
+            let val = b as i64;
+            let target = vm.regs.remove(&dst).unwrap();
 
-                if let RObject::RInteger(orig) = target.as_ref() {
-                    let ans = *orig - val;
+            if let RObject::RInteger(orig) = target.as_ref() {
+                let ans = *orig - val;
+                vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
+                return Ok(());
+            }
+        }
+
+        OpCode::ADD => {
+            let a = fetched.as_b()?;
+            let dst = a as usize;
+            let dst2 = dst + 1;
+            let target = vm.regs.remove(&dst).unwrap();
+            let target2 = vm.regs.get(&dst2).unwrap().clone();
+
+            if let RObject::RInteger(t1) = target.as_ref() {
+                if let RObject::RInteger(t2) = target2.as_ref() {
+                    let ans = *t1 + *t2;
                     vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
                     return Ok(());
                 }
             }
-            unreachable!("not BB insn")
-        }
-
-        OpCode::ADD => {
-            if let Fetched::B(a) = fetched {
-                let dst = *a as usize;
-                let dst2 = dst + 1;
-                let target = vm.regs.remove(&dst).unwrap();
-                let target2 = vm.regs.get(&dst2).unwrap().clone();
-
-                if let RObject::RInteger(t1) = target.as_ref() {
-                    if let RObject::RInteger(t2) = target2.as_ref() {
-                        let ans = *t1 + *t2;
-                        vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
-                        return Ok(());
-                    }
-                }
-            }
-            unreachable!("not B insn")
         }
 
         OpCode::LOADI_0
@@ -203,166 +186,139 @@ pub fn eval_insn1(
         | OpCode::LOADI_5
         | OpCode::LOADI_6
         | OpCode::LOADI_7 => {
-            if let Fetched::B(a) = fetched {
-                let dst = *a as usize;
-                let val = (*opcode as i64) - (OpCode::LOADI_0 as i64);
-                let val = Rc::new(RObject::RInteger(val));
+            let a = fetched.as_b()?;
+            let dst = a as usize;
+            let val = (*opcode as i64) - (OpCode::LOADI_0 as i64);
+            let val = Rc::new(RObject::RInteger(val));
 
-                vm.regs.insert(dst, val);
-            } else {
-                unreachable!("not B insn")
-            }
+            vm.regs.insert(dst, val);
         }
 
         OpCode::LT => {
-            if let Fetched::B(a) = fetched {
-                let lhs = *a as usize;
-                let rhs = lhs + 1;
+            let a = fetched.as_b()?;
+            let lhs = a as usize;
+            let rhs = lhs + 1;
 
-                let lhs = vm.regs.get(&lhs).unwrap().clone();
-                let rhs = vm.regs.get(&rhs).unwrap().clone();
+            let lhs = vm.regs.get(&lhs).unwrap().clone();
+            let rhs = vm.regs.get(&rhs).unwrap().clone();
 
-                if let RObject::RInteger(lhs) = lhs.as_ref() {
-                    if let RObject::RInteger(rhs) = rhs.as_ref() {
-                        let cond = *lhs < *rhs;
-                        vm.regs.insert(*a as usize, Rc::new(RObject::RBool(cond)));
-                        return Ok(());
-                    }
+            if let RObject::RInteger(lhs) = lhs.as_ref() {
+                if let RObject::RInteger(rhs) = rhs.as_ref() {
+                    let cond = *lhs < *rhs;
+                    vm.regs.insert(a as usize, Rc::new(RObject::RBool(cond)));
+                    return Ok(());
                 }
-
-                unreachable!("type error")
-            } else {
-                unreachable!("not BB insn")
             }
+
+            unreachable!("type error")
         }
 
         OpCode::GT => {
-            if let Fetched::B(a) = fetched {
-                let lhs = *a as usize;
-                let rhs = lhs + 1;
+            let a = fetched.as_b()?;
+            let lhs = a as usize;
+            let rhs = lhs + 1;
 
-                let lhs = vm.regs.get(&lhs).unwrap().clone();
-                let rhs = vm.regs.get(&rhs).unwrap().clone();
+            let lhs = vm.regs.get(&lhs).unwrap().clone();
+            let rhs = vm.regs.get(&rhs).unwrap().clone();
 
-                if let RObject::RInteger(lhs) = lhs.as_ref() {
-                    if let RObject::RInteger(rhs) = rhs.as_ref() {
-                        let cond = *lhs > *rhs;
-                        vm.regs.insert(*a as usize, Rc::new(RObject::RBool(cond)));
-                        return Ok(());
-                    }
+            if let RObject::RInteger(lhs) = lhs.as_ref() {
+                if let RObject::RInteger(rhs) = rhs.as_ref() {
+                    let cond = *lhs > *rhs;
+                    vm.regs.insert(a as usize, Rc::new(RObject::RBool(cond)));
+                    return Ok(());
                 }
-
-                unreachable!("type error")
-            } else {
-                unreachable!("not BB insn")
             }
+
+            unreachable!("type error")
         }
 
         OpCode::STRING => {
-            if let Fetched::BB(a, b) = fetched {
-                let strval = &irep.pool[*b as usize];
-                let RPool::StaticStr(s) = strval;
-                let regval = RObject::RString(s.to_str().unwrap().to_string());
-                vm.regs.insert(*a as usize, Rc::new(regval));
-            } else {
-                unreachable!("not BB insn")
-            }
+            let (a, b) = fetched.as_bb()?;
+            let strval = &irep.pool[b as usize];
+            let RPool::StaticStr(s) = strval;
+            let regval = RObject::RString(s.to_str().unwrap().to_string());
+            vm.regs.insert(a as usize, Rc::new(regval));
         }
 
         OpCode::SSEND => {
-            if let Fetched::BBB(a, b, c) = fetched {
-                let cur_irep = vm.cur_irep.as_ref();
+            let (a, b, c) = fetched.as_bbb()?;
+            let cur_irep = vm.cur_irep.as_ref();
 
-                let reg_begin = *a;
-                let arg_count = *c;
-                let cur_self = RObject::RInstance {
-                    class_index: vm.target_class.unwrap(),
-                };
+            let reg_begin = a;
+            let arg_count = c;
+            let cur_self = RObject::RInstance {
+                class_index: vm.target_class.unwrap(),
+            };
 
-                let sym = cur_irep.syms[*b as usize]
-                    .value
-                    .to_str()
-                    .unwrap()
-                    .to_string();
-                let mut args = Vec::new();
-                if arg_count > 0 {
-                    for i in (reg_begin + 1)..=(reg_begin + arg_count) {
-                        args.push(i as usize)
-                    }
+            let sym = cur_irep.syms[b as usize]
+                .value
+                .to_str()
+                .unwrap()
+                .to_string();
+            let mut args = Vec::new();
+            if arg_count > 0 {
+                for i in (reg_begin + 1)..=(reg_begin + arg_count) {
+                    args.push(i as usize)
                 }
-
-                let ret = call_func(vm, &cur_self, sym, &args)?;
-                vm.regs.insert(reg_begin as usize, ret);
-            } else {
-                unreachable!("not BBB insn")
             }
+
+            let ret = call_func(vm, &cur_self, sym, &args)?;
+            vm.regs.insert(reg_begin as usize, ret);
         }
 
         OpCode::TCLASS => {
-            if let Fetched::B(a) = fetched {
-                let reg_set = *a as usize;
-                let tclass = RObject::Class {
-                    class_index: vm.target_class.unwrap(),
-                };
-                vm.regs.insert(reg_set, Rc::new(tclass));
-            } else {
-                unreachable!("not B insn")
-            }
+            let a = fetched.as_b()?;
+            let reg_set = a as usize;
+            let tclass = RObject::Class {
+                class_index: vm.target_class.unwrap(),
+            };
+            vm.regs.insert(reg_set, Rc::new(tclass));
         }
 
         OpCode::METHOD => {
-            if let Fetched::BB(a, b) = fetched {
-                let reg_set = *a as usize;
-                let irep_index = *b as usize;
-                let proc = RObject::RProc { irep_index };
-                vm.regs.insert(reg_set, Rc::new(proc));
-            } else {
-                unreachable!("not BB insn")
-            }
+            let (a, b) = fetched.as_bb()?;
+            let reg_set = a as usize;
+            let irep_index = b as usize;
+            let proc = RObject::RProc { irep_index };
+            vm.regs.insert(reg_set, Rc::new(proc));
         }
 
         OpCode::RETURN => {
-            if let Fetched::B(a) = fetched {
-                let reg_ret = *a as usize;
-                if let Some(val) = vm.regs.remove(&reg_ret) {
-                    vm.regs.insert(0, val);
-                }
-            } else {
-                unreachable!("not B insn")
+            let a = fetched.as_b()?;
+            let reg_ret = a as usize;
+            if let Some(val) = vm.regs.remove(&reg_ret) {
+                vm.regs.insert(0, val);
             }
         }
 
         OpCode::DEF => {
-            if let Fetched::BB(a, b) = fetched {
-                let reg_tclass = *a as usize;
-                let reg_proc = reg_tclass + 1;
-                let sym_id = *b as usize;
-                let sym_name = &vm.cur_irep.syms[sym_id].value.to_str().unwrap();
-                if let Some(proc) = vm.regs.remove(&reg_proc) {
-                    let tclass = vm.regs.remove(&reg_tclass).unwrap();
-                    if let RObject::Class { class_index } = tclass.as_ref() {
-                        if let RObject::RProc { irep_index } = proc.as_ref() {
-                            let rclass = vm.class_arena.get(class_index).unwrap().clone();
-                            let mut rclass = rclass.borrow_mut();
-                            let irep = vm.irep_arena.get(irep_index).unwrap();
-                            let body = Method::RubyMethod(irep.clone());
+            let (a, b) = fetched.as_bb()?;
+            let reg_tclass = a as usize;
+            let reg_proc = reg_tclass + 1;
+            let sym_id = b as usize;
+            let sym_name = &vm.cur_irep.syms[sym_id].value.to_str().unwrap();
+            if let Some(proc) = vm.regs.remove(&reg_proc) {
+                let tclass = vm.regs.remove(&reg_tclass).unwrap();
+                if let RObject::Class { class_index } = tclass.as_ref() {
+                    if let RObject::RProc { irep_index } = proc.as_ref() {
+                        let rclass = vm.class_arena.get(class_index).unwrap().clone();
+                        let mut rclass = rclass.borrow_mut();
+                        let irep = vm.irep_arena.get(irep_index).unwrap();
+                        let body = Method::RubyMethod(irep.clone());
 
-                            rclass.methods.insert(
-                                sym_name.to_string(),
-                                RMethod {
-                                    sym_id: 10001,
-                                    body,
-                                },
-                            );
-                        }
-                    } else {
-                        unreachable!("tclass");
+                        rclass.methods.insert(
+                            sym_name.to_string(),
+                            RMethod {
+                                sym_id: 10001,
+                                body,
+                            },
+                        );
                     }
                 } else {
-                    unreachable!("proc reg");
+                    unreachable!("tclass");
                 }
             } else {
-                unreachable!("not BB insn")
+                unreachable!("proc reg");
             }
         }
 

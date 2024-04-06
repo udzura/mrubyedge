@@ -97,6 +97,10 @@ pub fn eval_insn1(
     vm.pc += ilen;
 
     match opcode {
+        OpCode::NOP => {
+            fetched.as_z()?;
+        }
+
         OpCode::MOVE => {
             let (a, b) = fetched.as_bb()?;
             let dst = a as usize;
@@ -106,11 +110,29 @@ pub fn eval_insn1(
             }
         }
 
+        OpCode::LOADL => {
+            let (a, b) = fetched.as_bb()?;
+            let dst = a as usize;
+            let src = b as usize;
+            if let Some(val) = vm.cur_irep.as_ref().pool.get(src) {
+                vm.regs.insert(dst, Rc::new(val.into()));
+            }
+        }
+
         OpCode::LOADI => {
             let (a, b) = fetched.as_bb()?;
             let dst = a as usize;
             let val = b;
             let val = Rc::new(RObject::RInteger(val as i64));
+
+            vm.regs.insert(dst, val);
+        }
+
+        OpCode::LOADINEG => {
+            let (a, b) = fetched.as_bb()?;
+            let dst = a as usize;
+            let val = b;
+            let val = Rc::new(RObject::RInteger(val as i64 * -1));
 
             vm.regs.insert(dst, val);
         }
@@ -235,7 +257,7 @@ pub fn eval_insn1(
         OpCode::STRING => {
             let (a, b) = fetched.as_bb()?;
             let strval = &irep.pool[b as usize];
-            let RPool::StaticStr(s) = strval;
+            let RPool::StaticStr(s) = strval else { unreachable!("not string const") };
             let regval = RObject::RString(s.to_str().unwrap().to_string());
             vm.regs.insert(a as usize, Rc::new(regval));
         }

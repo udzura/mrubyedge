@@ -68,9 +68,11 @@ impl<'insn> VMIrep<'insn> {
     }
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum RPool {
     StaticStr(CString),
+    Dummy,
 }
 
 #[derive(Debug)]
@@ -78,6 +80,7 @@ pub struct RSym {
     pub value: CString,
 }
 
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum RObject {
     Class { class_index: usize },
@@ -89,6 +92,20 @@ pub enum RObject {
     RBool(bool),
     Nil,
     // ...
+}
+
+impl From<&RPool> for RObject {
+    fn from(value: &RPool) -> Self {
+        match value {
+            RPool::StaticStr(s) => {
+                let s = <CString as Clone>::clone(&s).into_string().unwrap();
+                RObject::RString(s)
+            }
+            _ => {
+                unimplemented!("From<&RPool>")
+            }
+        }
+    }
 }
 
 impl TryFrom<&RObject> for i32 {

@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::File;
+use std::fs::{remove_file, File};
 use std::io::Read;
 use std::process::Command;
 
@@ -11,13 +11,14 @@ fn main() -> Result<(), std::io::Error> {
 
     let output = Command::new("mrbc")
         .arg("-v")
+        .arg("-o")
+        .arg("/tmp/__tmp__.mrb")
         .arg(path)
         .output()
         .expect("failed to compile mruby script");
-    eprintln!("compiled: {}", String::from_utf8_lossy(&output.stdout));
+    eprintln!("debug: {}", String::from_utf8_lossy(&output.stdout));
 
-    let path = path.strip_suffix(".rb").unwrap();
-    let mut file = File::open(&format!("{}.mrb", path))?;
+    let mut file = File::open("/tmp/__tmp__.mrb")?;
     let mut bin = Vec::<u8>::new();
     file.read_to_end(&mut bin)?;
 
@@ -27,6 +28,8 @@ fn main() -> Result<(), std::io::Error> {
     vm.prelude().unwrap();
     // dbg!(&vm);
     vm.eval_insn().unwrap();
+
+    remove_file("/tmp/__tmp__.mrb")?;
 
     eprintln!("return value:");
     let top = 0 as usize;
@@ -38,6 +41,6 @@ fn main() -> Result<(), std::io::Error> {
         None => eprintln!("None"),
     }
 
-    //   dbg!(&vm);
+    // dbg!(&vm);
     Ok(())
 }

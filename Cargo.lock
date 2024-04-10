@@ -62,6 +62,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bpaf"
+version = "0.9.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "567fc5f0a754100df11b167b2a247b2366fc1ac18e9b776a07659be00878f681"
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -125,6 +131,7 @@ name = "mec"
 version = "0.2.1"
 dependencies = [
  "askama",
+ "bpaf",
  "nom",
  "rand",
 ]

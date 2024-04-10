@@ -1,13 +1,22 @@
 #![feature(path_file_prefix)]
 
+extern crate bpaf;
 extern crate rand;
 
-use std::{fs::File, io::Read, process::Command};
+use std::{fs::File, io::Read, path::PathBuf, process::Command};
 
 use askama::Template;
+use bpaf::{any, construct, long, Parser};
 use rand::distributions::{Alphanumeric, DistString};
 
 use mec::template::{CargoToml, LibRs};
+
+#[derive(Debug, Clone)]
+struct ParsedOpt {
+    fnname: Option<PathBuf>,
+    skip_cleanup: bool,
+    path: PathBuf,
+}
 
 fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("running: `{}`", sharg);
@@ -33,31 +42,28 @@ fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let fnname = long("fnname").argument::<PathBuf>("FNNAME").optional();
+    let skip_cleanup = long("skip-cleanup").switch();
+    let path = any::<PathBuf, _, _>("MRUBY_FILE", |x| {
+        (x.to_str().unwrap() != "--help").then_some(x)
+    });
+    let opts: ParsedOpt = construct!(ParsedOpt {
+        fnname,
+        skip_cleanup,
+        path,
+    })
+    .to_options()
+    .descr("mec - An mruby/edge compilation cli")
+    .fallback_to_usage()
+    .run();
+
     let mut rng = rand::thread_rng();
     let suffix = Alphanumeric.sample_string(&mut rng, 32);
 
-    let mut fnname = "".to_string();
-    let mut last_matched = "".to_string();
-    let mut in_fnname = false;
-    for arg in std::env::args() {
-        match arg.as_str() {
-            "--fnname" | "-f" => in_fnname = true,
-            v => {
-                if in_fnname {
-                    fnname = v.to_string();
-                    in_fnname = false;
-                } else {
-                    last_matched = v.to_string();
-                }
-            }
-        }
-    }
+    let fnname = opts.fnname;
+    let path = opts.path;
 
-    if last_matched.is_empty() {
-        panic!("invalid argument. usage: mec --fnname FNNAME FILE.rb")
-    }
-
-    let mrubyfile = std::fs::canonicalize(last_matched)?;
+    let mrubyfile = std::fs::canonicalize(path)?;
     let fname = mrubyfile.as_path().file_prefix().unwrap().to_string_lossy();
 
     let pwd = std::env::current_dir()?;
@@ -107,12 +113,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rendered = lib_rs.render()?;
         cont = rendered;
     } else {
-        if fnname.is_empty() {
+        if fnname.is_none() {
             panic!("--fnname FNNAME should be specified when export.rbs does not exist")
         }
+        let fnname = fnname.unwrap();
 
         let ftypes = vec![mec::template::RustFnTemplate {
-            func_name: &fnname,
+            func_name: fnname.to_str().unwrap(),
             args_decl: "",
             args_let_vec: "vec![]",
             rettype_decl: "-> ()",
@@ -136,7 +143,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &pwd.to_str().unwrap(),
         &fname.to_string()
     ))?;
-    sh_do(&format!("cd .. && rm -rf work-mrubyedge-{}", &suffix))?;
+    if opts.skip_cleanup {
+        println!(
+            "debug: working directory for compile wasm is remained in {}",
+            std::env::current_dir()?.as_os_str().to_str().unwrap()
+        );
+    } else {
+        sh_do(&format!("cd .. && rm -rf work-mrubyedge-{}", &suffix))?;
+    }
 
     std::env::set_current_dir(pwd)?;
 

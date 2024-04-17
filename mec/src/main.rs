@@ -14,6 +14,7 @@ use mec::template::{CargoToml, LibRs};
 #[derive(Debug, Clone)]
 struct ParsedOpt {
     fnname: Option<PathBuf>,
+    no_wasi: bool,
     skip_cleanup: bool,
     path: PathBuf,
 }
@@ -47,8 +48,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = any::<PathBuf, _, _>("MRUBY_FILE", |x| {
         (x.to_str().unwrap() != "--help").then_some(x)
     });
+    let no_wasi = long("no-wasi").switch();
     let opts: ParsedOpt = construct!(ParsedOpt {
         fnname,
+        no_wasi,
         skip_cleanup,
         path,
     })
@@ -136,10 +139,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", &cont);
     std::fs::write("src/lib.rs", cont)?;
 
+    let target = if opts.no_wasi {
+        "wasm32-unknown-unknown"
+    } else {
+        "wasm32-wasi"
+    };
+
     sh_do("rustup override set nightly 2>/dev/null")?;
-    sh_do("cargo build --target wasm32-wasi --release")?;
+    sh_do(&format!("cargo build --target {} --release", target))?;
     sh_do(&format!(
-        "cp ./target/wasm32-wasi/release/mywasm.wasm {}/{}.wasm",
+        "cp ./target/{}/release/mywasm.wasm {}/{}.wasm",
+        target,
         &pwd.to_str().unwrap(),
         &fname.to_string()
     ))?;

@@ -55,6 +55,33 @@ impl FuncDef {
             }
         }
     }
+
+    // for function importer
+    pub fn imoprted_body(&self) -> &str {
+        let mut buf = String::new();
+        for (i, _) in self.argstype.iter().enumerate() {
+            let tmp = format!(
+                "let a{} = args[{}].clone().as_ref().try_into().unwrap();\n",
+                i, i
+            );
+            buf.push_str(&tmp);
+        }
+        let call_arg = self
+            .argstype
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("a{}", i))
+            .collect::<Vec<String>>()
+            .join(",");
+        buf.push_str(&format!("let r0 = unsafe {{ add({}) }};\n", call_arg));
+        let ret_mruby_type = match self.rettype.as_str() {
+            "Integer" => "RObject::RInteger(r0 as i64)",
+            "void" => "RObject::Nil",
+            _ => unimplemented!("unsupported arg type"),
+        };
+        buf.push_str(&format!("Rc::new({})\n", ret_mruby_type));
+        buf.leak()
+    }
 }
 
 use nom::branch::alt;

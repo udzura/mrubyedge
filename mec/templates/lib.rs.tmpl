@@ -1,8 +1,26 @@
 extern crate mrubyedge;
 
-use mrubyedge::{mrb_helper, vm::RObject};
+use mrubyedge::{
+    mrb_helper,
+    vm::VM,
+    vm::{RMethod, RObject},
+};
+
+use std::rc::Rc;
 
 const DATA: &'static [u8] = include_bytes!("./{{ file_basename }}.mrb");
+
+extern "C" {
+{% for fn in ftypes_imports %}
+    fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }};
+{% endfor %}
+}
+
+{% for fn in ftypes_imports %}
+fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> Rc<RObject> {
+{{ fn.imoprted_body }}
+}
+{% endfor %}
 
 {% for fn in ftypes %}
 
@@ -17,6 +35,18 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     let top_self = RObject::RInstance {
         class_index: objclass_sym,
     };
+
+{% set index = 1 %}
+{% for ifn in ftypes_imports %}
+    let klass = mrb_helper::mrb_get_target_class(&mut vm);
+    let method = RMethod {
+        sym_id: 1000000 + {{ index }},
+        body: mrubyedge::vm::Method::CMethod(__imported_c_{{ ifn.func_name }}),
+    };
+    mrb_helper::mrb_define_method(&mut vm, klass, "{{ ifn.func_name }}", method);
+{% set index = index + 1 %}
+{% endfor %}
+
     let args = {{ fn.args_let_vec }};
     let retval = mrb_helper::mrb_funcall(&mut vm, &top_self, "{{ fn.func_name }}".to_string(), &args);
 

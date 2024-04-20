@@ -95,13 +95,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     }
 
-    let import_rbs_fname = format!("{}.export.rbs", fname);
-    let import_rbs = mrubyfile.parent().unwrap().join(&import_rbs_fname);
+    let export_rbs_fname = format!("{}.export.rbs", fname);
+    let export_rbs = mrubyfile.parent().unwrap().join(&export_rbs_fname);
     let cont: String;
 
+    let mut ftypes_imports = Vec::new();
+    let import_rbs_fname = format!("{}.import.rbs", fname);
+    let import_rbs = mrubyfile.parent().unwrap().join(&import_rbs_fname);
     if import_rbs.exists() {
         eprintln!(
-            "detected export.rbs: {}",
+            "detected import.rbs: {}",
             import_rbs.as_path().to_string_lossy()
         );
         let mut f = File::open(import_rbs)?;
@@ -109,8 +112,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         f.read_to_string(&mut s)?;
 
         let (_, parsed) = mec::rbs_parser::parse(&s).unwrap();
+        for def in parsed.leak().iter() {
+            ftypes_imports.push(mec::template::RustImportFnTemplate {
+                func_name: &def.name,
+                args_decl: def.args_decl(),
+                rettype_decl: def.rettype_decl(),
+                imoprted_body: def.imoprted_body(),
+            })
+        }
+    }
+
+    if export_rbs.exists() {
+        eprintln!(
+            "detected export.rbs: {}",
+            export_rbs.as_path().to_string_lossy()
+        );
+        let mut f = File::open(export_rbs)?;
+        let mut s = String::new();
+        f.read_to_string(&mut s)?;
+
+        let (_, parsed) = mec::rbs_parser::parse(&s).unwrap();
         let mut ftypes = vec![];
-        for def in parsed.iter() {
+        for def in parsed.leak().iter() {
             ftypes.push(mec::template::RustFnTemplate {
                 func_name: &def.name,
                 args_decl: def.args_decl(),
@@ -122,6 +145,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let lib_rs = LibRs {
             file_basename: &fname,
             ftypes: &&ftypes,
+            ftypes_imports: &ftypes_imports,
         };
         let rendered = lib_rs.render()?;
         cont = rendered;
@@ -141,6 +165,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let lib_rs = LibRs {
             file_basename: &fname,
             ftypes: &&ftypes,
+            ftypes_imports: &ftypes_imports,
         };
         let rendered = lib_rs.render()?;
         cont = rendered;

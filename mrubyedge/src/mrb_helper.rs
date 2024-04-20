@@ -1,4 +1,6 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
+
+use vm::{RClass, RMethod};
 
 use crate::{
     rite::Error,
@@ -54,4 +56,19 @@ pub fn mrb_funcall<'insn>(
         }
     }
     // Ok(RObject::Nil)
+}
+pub fn mrb_get_target_class<'insn>(vm: &mut VM<'insn>) -> Rc<RefCell<RClass<'insn>>> {
+    let objclass_sym = vm.target_class.unwrap() as usize;
+    let klass = vm.class_arena.get(&objclass_sym).unwrap().clone();
+    klass.clone()
+}
+
+pub fn mrb_define_method<'insn>(
+    _vm: &mut VM<'insn>,
+    klass: Rc<RefCell<RClass<'insn>>>,
+    name: &str,
+    method: RMethod<'insn>,
+) {
+    let mut klass = klass.as_ref().borrow_mut();
+    klass.methods.insert(name.to_string(), method);
 }

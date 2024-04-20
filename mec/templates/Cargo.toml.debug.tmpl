@@ -1,0 +1,15 @@
+[package]
+name = "mywasm"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies.mrubyedge]
+# fixme can be changed
+path = "{{ mruby_edge_crate_path }}"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"

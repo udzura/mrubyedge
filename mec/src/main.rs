@@ -9,13 +9,14 @@ use askama::Template;
 use bpaf::{any, construct, long, Parser};
 use rand::distributions::{Alphanumeric, DistString};
 
-use mec::template::{CargoToml, LibRs};
+use mec::template::{cargo_toml::CargoTomlDebug, CargoToml, LibRs};
 
 #[derive(Debug, Clone)]
 struct ParsedOpt {
     fnname: Option<PathBuf>,
     no_wasi: bool,
     skip_cleanup: bool,
+    debug_mruby_edge: bool,
     path: PathBuf,
 }
 
@@ -49,10 +50,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (x.to_str().unwrap() != "--help").then_some(x)
     });
     let no_wasi = long("no-wasi").switch();
+    let debug_mruby_edge = long("debug-mruby-edge").switch();
     let opts: ParsedOpt = construct!(ParsedOpt {
         fnname,
         no_wasi,
         skip_cleanup,
+        debug_mruby_edge,
         path,
     })
     .to_options()
@@ -80,10 +83,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()))?;
     sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()))?;
 
-    let cargo_toml = CargoToml {
-        mrubyedge_version: "0.1.3",
-    };
-    std::fs::write("Cargo.toml", cargo_toml.render()?)?;
+    if opts.debug_mruby_edge {
+        let cargo_toml = CargoTomlDebug {
+            mruby_edge_crate_path: "/opt/ghq/github.com/udzura/mrubyedge/mrubyedge",
+        };
+        std::fs::write("Cargo.toml", cargo_toml.render()?)?;
+    } else {
+        let cargo_toml = CargoToml {
+            mrubyedge_version: "0.1.3",
+        };
+        std::fs::write("Cargo.toml", cargo_toml.render()?)?;
+    }
 
     let import_rbs_fname = format!("{}.export.rbs", fname);
     let import_rbs = mrubyfile.parent().unwrap().join(&import_rbs_fname);

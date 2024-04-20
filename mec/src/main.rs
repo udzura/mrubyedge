@@ -90,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     } else {
         let cargo_toml = CargoToml {
-            mrubyedge_version: "0.1.3",
+            mrubyedge_version: "0.1.4",
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     }

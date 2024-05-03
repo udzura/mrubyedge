@@ -138,6 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 func_name: &def.name,
                 args_decl: def.args_decl(),
                 args_let_vec: def.args_let_vec(),
+                str_args_converter: def.str_args_converter(),
                 rettype_decl: def.rettype_decl(),
             })
         }
@@ -159,6 +160,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             func_name: fnname.to_str().unwrap(),
             args_decl: "",
             args_let_vec: "vec![]",
+            str_args_converter: "",
             rettype_decl: "-> ()",
         }];
 

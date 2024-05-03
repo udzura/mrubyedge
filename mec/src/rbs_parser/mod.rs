@@ -19,6 +19,8 @@ impl FuncDef {
             .enumerate()
             .map(|(idx, arg)| match arg.as_str() {
                 "Integer" => format!("a{}: i32", idx),
+                "Float" => format!("a{}: f32", idx),
+                "String" => format!("p{0}: *const u8, l{0}: usize", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
                 }
@@ -38,6 +40,8 @@ impl FuncDef {
             .enumerate()
             .map(|(idx, arg)| match arg.as_str() {
                 "Integer" => format!("std::rc::Rc::new(RObject::RInteger(a{} as i64))", idx),
+                "Float" => format!("std::rc::Rc::new(RObject::RFloat(a{} as f64))", idx),
+                "String" => format!("std::rc::Rc::new(RObject::RString(a{}.to_owned()))", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
                 }
@@ -46,10 +50,39 @@ impl FuncDef {
         format!("vec![{}]", converted.join(", ")).leak()
     }
 
+    pub fn str_args_converter(&self) -> &str {
+        if self.argstype.len() == 0 {
+            return "";
+        }
+        let mut buf = String::new();
+
+        for (idx, arg) in self.argstype.iter().enumerate() {
+            match arg.as_str() {
+                "String" => {
+                    buf.push_str(&format!(
+                        "
+let a{0} = unsafe {{
+    let s = std::slice::from_raw_parts(p{0}, l{0} as usize);
+    std::str::from_utf8(s).expect(\"invalid utf8\")
+}};
+",
+                        idx
+                    ));
+                }
+                _ => {
+                    // skip
+                }
+            }
+        }
+
+        buf.leak()
+    }
+
     pub fn rettype_decl(&self) -> &str {
         match self.rettype.as_str() {
             "void" => "-> ()",
             "Integer" => "-> i32",
+            "Float" => "-> f32",
             _ => {
                 unimplemented!("unsupported arg type")
             }

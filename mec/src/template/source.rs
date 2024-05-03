@@ -14,6 +14,7 @@ pub struct RustFnTemplate<'a> {
     pub func_name: &'a str,
     pub args_decl: &'a str,
     pub args_let_vec: &'a str,
+    pub str_args_converter: &'a str,
     pub rettype_decl: &'a str,
 }
 

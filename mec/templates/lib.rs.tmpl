@@ -9,6 +9,20 @@ use mrubyedge::{
 use std::rc::Rc;
 
 const DATA: &'static [u8] = include_bytes!("./{{ file_basename }}.mrb");
+const MEMORY_INDEX: u32 = 0;
+const PAGE_SIZE: usize = 65536; // 64KB
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe fn __mrbe_grow(num_pages: usize) -> *const u8 {
+    use core::arch::wasm32;
+    let num_pages = wasm32::memory_grow(MEMORY_INDEX, num_pages);
+    if num_pages == usize::max_value() {
+        return usize::max_value() as *const u8;
+    }
+    let ptr = (num_pages * PAGE_SIZE) as *const u8;
+    ptr
+}
 
 extern "C" {
 {% for fn in ftypes_imports %}
@@ -46,6 +60,8 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     mrb_helper::mrb_define_method(&mut vm, klass, "{{ ifn.func_name }}", method);
 {% set index = index + 1 %}
 {% endfor %}
+
+    {{ fn.str_args_converter }}
 
     let args = {{ fn.args_let_vec }};
     let retval = mrb_helper::mrb_funcall(&mut vm, &top_self, "{{ fn.func_name }}".to_string(), &args);

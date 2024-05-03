@@ -1,3 +1,5 @@
 def showstring: (String) -> void
 
 def getstring: () -> String
+
+def usejs: () -> void

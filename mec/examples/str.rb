@@ -5,3 +5,8 @@ end
 def getstring
   "mruby/edge String!"
 end
+
+def usejs
+  str = putstring
+  consolelog str
+end

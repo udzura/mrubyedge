@@ -140,8 +140,36 @@ let a{0} = unsafe {{
             "let r0 = unsafe {{ {}({}) }};\n",
             &self.name, call_arg
         ));
+
+        if self.rettype.as_str() == "String" {
+            buf.push_str(
+                "
+let mut buf = Vec::<u8>::new();
+let mut off: usize = 0;
+let s0: String;
+unsafe {
+    loop {
+        let b = *(r0.add(off));
+        if b == 0 {
+            break;
+        } else {
+            buf.push(b);
+        }
+        if off >= 65536 {
+            panic!(\"unterminated string detected\");
+        }
+        off += 1;
+    }
+    s0 = String::from_utf8_unchecked(buf);
+}
+",
+            );
+        }
+
         let ret_mruby_type = match self.rettype.as_str() {
             "Integer" => "RObject::RInteger(r0 as i64)",
+            "Float" => "RObject::RInteger(r0 as f64)",
+            "String" => "RObject::RString(s0)",
             "void" => "RObject::Nil",
             _ => unimplemented!("unsupported arg type"),
         };

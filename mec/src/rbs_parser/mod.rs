@@ -83,9 +83,24 @@ let a{0} = unsafe {{
             "void" => "-> ()",
             "Integer" => "-> i32",
             "Float" => "-> f32",
+            "String" => "-> *const u8",
             _ => {
                 unimplemented!("unsupported arg type")
             }
+        }
+    }
+
+    pub fn handle_retval(&self) -> &str {
+        match self.rettype.as_str() {
+            "String" => {
+                let mut buf = String::new();
+                buf.push_str("let mut retval: String = retval.as_ref().try_into().unwrap();\n");
+                // TODO: handle string length
+                buf.push_str("retval.push('\0');\n");
+                buf.push_str("retval.as_str().as_ptr()\n");
+                buf.leak()
+            }
+            _ => "retval.as_ref().try_into().unwrap()",
         }
     }
 

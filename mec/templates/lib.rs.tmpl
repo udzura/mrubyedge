@@ -68,7 +68,7 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
 
     match &retval {
         Ok(retval) => {
-	    retval.as_ref().try_into().unwrap()
+	    {{ fn.handle_retval }}
         }
         Err(ex) => {
             dbg!(ex);

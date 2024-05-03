@@ -140,6 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 args_let_vec: def.args_let_vec(),
                 str_args_converter: def.str_args_converter(),
                 rettype_decl: def.rettype_decl(),
+                handle_retval: def.handle_retval(),
             })
         }
 
@@ -162,6 +163,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             args_let_vec: "vec![]",
             str_args_converter: "",
             rettype_decl: "-> ()",
+            handle_retval: "()",
         }];
 
         let lib_rs = LibRs {

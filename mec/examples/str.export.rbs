@@ -1,1 +1,3 @@
 def showstring: (String) -> void
+
+def getstring: () -> String

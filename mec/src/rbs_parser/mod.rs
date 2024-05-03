@@ -92,21 +92,39 @@ let a{0} = unsafe {{
     // for function importer
     pub fn imoprted_body(&self) -> &str {
         let mut buf = String::new();
-        for (i, _) in self.argstype.iter().enumerate() {
-            let tmp = format!(
-                "let a{} = args[{}].clone().as_ref().try_into().unwrap();\n",
-                i, i
-            );
+        for (i, typ) in self.argstype.iter().enumerate() {
+            let tmp = match typ.as_str() {
+                "String" => {
+                    let mut buf = String::new();
+                    buf.push_str(&format!(
+                        "let a{0}: String = args[{0}].clone().as_ref().try_into().unwrap();\n",
+                        i
+                    ));
+                    buf.push_str(&format!("let p{0} = a{0}.as_str().as_ptr();\n", i));
+                    buf.push_str(&format!("let l{0} = a{0}.as_str().len();\n", i));
+                    buf
+                }
+                _ => format!(
+                    "let a{0} = args[{0}].clone().as_ref().try_into().unwrap();\n",
+                    i,
+                ),
+            };
             buf.push_str(&tmp);
         }
         let call_arg = self
             .argstype
             .iter()
             .enumerate()
-            .map(|(i, _)| format!("a{}", i))
+            .map(|(i, typ)| match typ.as_str() {
+                "String" => format!("p{0}, l{0}", i),
+                _ => format!("a{}", i),
+            })
             .collect::<Vec<String>>()
             .join(",");
-        buf.push_str(&format!("let r0 = unsafe {{ add({}) }};\n", call_arg));
+        buf.push_str(&format!(
+            "let r0 = unsafe {{ {}({}) }};\n",
+            &self.name, call_arg
+        ));
         let ret_mruby_type = match self.rettype.as_str() {
             "Integer" => "RObject::RInteger(r0 as i64)",
             "void" => "RObject::Nil",

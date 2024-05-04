@@ -1,3 +1,5 @@
 def consolelog: (String) -> void
 
+def consolelog2: (String, String) -> void
+
 def putstring: () -> String

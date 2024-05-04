@@ -95,8 +95,11 @@ let a{0} = unsafe {{
             "String" => {
                 let mut buf = String::new();
                 buf.push_str("let mut retval: String = retval.as_ref().try_into().unwrap();\n");
-                // TODO: handle string length
                 buf.push_str("retval.push('\0');\n");
+                buf.push_str(&format!(
+                    "unsafe {{ {} = retval.len() - 1; }}\n",
+                    self.size_helper_var_name()
+                ));
                 buf.push_str("retval.as_str().as_ptr()\n");
                 buf.leak()
             }
@@ -111,7 +114,14 @@ let a{0} = unsafe {{
     pub fn exported_helper_var(&self) -> &str {
         match self.rettype.as_str() {
             "String" => format!(
-                "#[allow(non_upper_case_globals)] pub static mut {}: usize = 0;",
+                "
+#[allow(non_upper_case_globals)]
+pub static mut {0}: usize = 0;
+#[no_mangle]
+pub unsafe fn __get{0}() -> u32 {{
+    return {0} as u32;
+}}
+",
                 &self.size_helper_var_name()
             )
             .leak(),

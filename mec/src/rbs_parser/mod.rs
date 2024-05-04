@@ -122,7 +122,14 @@ let a{0} = unsafe {{
     pub fn import_helper_var(&self) -> &str {
         match self.rettype.as_str() {
             "String" => format!(
-                "#[allow(non_upper_case_globals)] pub static mut {}: usize = 0;",
+                "
+#[allow(non_upper_case_globals)]
+pub static mut {0}: usize = 0;
+#[no_mangle]
+pub unsafe fn __set{0}(s: u32) {{
+    {0} = s as usize;
+}}
+",
                 &self.size_helper_var_name()
             )
             .leak(),
@@ -168,28 +175,35 @@ let a{0} = unsafe {{
         ));
 
         if self.rettype.as_str() == "String" {
-            buf.push_str(
+            buf.push_str(&format!(
                 "
-let mut buf = Vec::<u8>::new();
-let mut off: usize = 0;
 let s0: String;
-unsafe {
-    loop {
-        let b = *(r0.add(off));
-        if b == 0 {
-            break;
-        } else {
-            buf.push(b);
-        }
-        if off >= 65536 {
-            panic!(\"unterminated string detected\");
-        }
-        off += 1;
-    }
-    s0 = String::from_utf8_unchecked(buf);
-}
+unsafe {{
+    if {0} == 0 {{
+        let mut buf = Vec::<u8>::new();
+        let mut off: usize = 0;
+        loop {{
+            let b = *(r0.add(off));
+            if b == 0 {{
+                break;
+            }} else {{
+                buf.push(b);
+            }}
+            if off >= 65536 {{
+                panic!(\"unterminated string detected\");
+            }}
+            off += 1;
+        }}
+        s0 = String::from_utf8_unchecked(buf);
+    }} else {{
+        let off = {0};
+	let s = std::slice::from_raw_parts(r0, off);
+	s0 = String::from_utf8_unchecked(s.to_vec());
+    }}
+}}
 ",
-            );
+                self.size_helper_var_name()
+            ));
         }
 
         let ret_mruby_type = match self.rettype.as_str() {

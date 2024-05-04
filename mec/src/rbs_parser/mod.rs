@@ -104,6 +104,32 @@ let a{0} = unsafe {{
         }
     }
 
+    fn size_helper_var_name(&self) -> String {
+        format!("__{}_size", self.name)
+    }
+
+    pub fn exported_helper_var(&self) -> &str {
+        match self.rettype.as_str() {
+            "String" => format!(
+                "#[allow(non_upper_case_globals)] pub static mut {}: usize = 0;",
+                &self.size_helper_var_name()
+            )
+            .leak(),
+            _ => "",
+        }
+    }
+
+    pub fn import_helper_var(&self) -> &str {
+        match self.rettype.as_str() {
+            "String" => format!(
+                "#[allow(non_upper_case_globals)] pub static mut {}: usize = 0;",
+                &self.size_helper_var_name()
+            )
+            .leak(),
+            _ => "",
+        }
+    }
+
     // for function importer
     pub fn imoprted_body(&self) -> &str {
         let mut buf = String::new();

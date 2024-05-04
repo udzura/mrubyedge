@@ -118,6 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 args_decl: def.args_decl(),
                 rettype_decl: def.rettype_decl(),
                 imoprted_body: def.imoprted_body(),
+                import_helper_var: def.import_helper_var(),
             })
         }
     }
@@ -141,6 +142,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 str_args_converter: def.str_args_converter(),
                 rettype_decl: def.rettype_decl(),
                 handle_retval: def.handle_retval(),
+                exported_helper_var: def.exported_helper_var(),
             })
         }
 
@@ -164,6 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             str_args_converter: "",
             rettype_decl: "-> ()",
             handle_retval: "()",
+            exported_helper_var: "",
         }];
 
         let lib_rs = LibRs {

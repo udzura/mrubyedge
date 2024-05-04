@@ -17,6 +17,7 @@ pub struct RustFnTemplate<'a> {
     pub str_args_converter: &'a str,
     pub rettype_decl: &'a str,
     pub handle_retval: &'a str,
+    pub exported_helper_var: &'a str,
 }
 
 pub struct RustImportFnTemplate<'a> {
@@ -24,4 +25,5 @@ pub struct RustImportFnTemplate<'a> {
     pub args_decl: &'a str,
     pub imoprted_body: &'a str,
     pub rettype_decl: &'a str,
+    pub import_helper_var: &'a str,
 }

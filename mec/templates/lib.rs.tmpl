@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 extern crate mrubyedge;
 
 use mrubyedge::{
@@ -31,6 +32,7 @@ extern "C" {
 }
 
 {% for fn in ftypes_imports %}
+{{ fn.import_helper_var }}
 fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> Rc<RObject> {
 {{ fn.imoprted_body }}
 }
@@ -38,6 +40,7 @@ fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObjec
 
 {% for fn in ftypes %}
 
+{{ fn.exported_helper_var }}
 #[no_mangle]
 pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     let rite = mrubyedge::rite::load(DATA).unwrap();

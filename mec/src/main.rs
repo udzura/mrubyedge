@@ -3,6 +3,8 @@
 extern crate bpaf;
 extern crate rand;
 
+const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "0.1.5";
+
 use std::{fs::File, io::Read, path::PathBuf, process::Command};
 
 use askama::Template;
@@ -90,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     } else {
         let cargo_toml = CargoToml {
-            mrubyedge_version: "0.1.4",
+            mrubyedge_version: MRUBY_EDGE_DEFAULT_VERSION,
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     }

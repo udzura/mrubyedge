@@ -275,6 +275,15 @@ pub fn eval_insn1(
             unreachable!("type error")
         }
 
+        OpCode::GETCONST => {
+            let (a, b) = fetched.as_bb()?;
+            let cur_irep = vm.cur_irep.as_ref();
+            let const_sym = &cur_irep.syms[b as usize];
+            let const_sym = const_sym.value.to_str().unwrap().to_owned();
+            let obj = vm.const_arena.get(&const_sym).unwrap();
+            vm.regs.insert(a as usize, obj.clone());
+        }
+
         OpCode::STRING => {
             let (a, b) = fetched.as_bb()?;
             let strval = &irep.pool[b as usize];
@@ -308,6 +317,31 @@ pub fn eval_insn1(
             }
 
             let ret = call_func(vm, &cur_self, sym, &args)?;
+            vm.regs.insert(reg_begin as usize, ret);
+        }
+
+        OpCode::SEND => {
+            let (a, b, c) = fetched.as_bbb()?;
+            let cur_irep = vm.cur_irep.as_ref();
+
+            let reg_begin = a;
+            let arg_count = c;
+            let pos = a as usize;
+            let get_self = vm.regs.get(&pos).unwrap().clone();
+
+            let sym = cur_irep.syms[b as usize]
+                .value
+                .to_str()
+                .unwrap()
+                .to_string();
+            let mut args = Vec::new();
+            if arg_count > 0 {
+                for i in (reg_begin + 1)..=(reg_begin + arg_count) {
+                    args.push(i as usize)
+                }
+            }
+
+            let ret = call_func(vm, &get_self, sym, &args)?;
             vm.regs.insert(reg_begin as usize, ret);
         }
 

@@ -16,6 +16,7 @@ pub enum Error {
     InvalidOpCode,
     TypeMismatch,
     InvalidOperand,
+    NoMethod,
 }
 
 impl fmt::Display for Error {

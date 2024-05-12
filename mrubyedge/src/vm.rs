@@ -16,6 +16,7 @@ pub struct VM<'insn> {
     // pub insns: &'a [u8],
     pub pc: usize,
     pub class_arena: HashMap<usize, Rc<RefCell<RClass<'insn>>>>,
+    pub const_arena: HashMap<String, Rc<RObject>>,
     pub target_class: Option<usize>,
     pub callinfo_vec: Vec<CallInfo<'insn>>,
     pub exception: Option<Box<RObject>>,
@@ -35,6 +36,7 @@ impl<'insn> VM<'insn> {
             irep_arena.insert(i, irep);
         }
         let class_arena = HashMap::default();
+        let const_arena = HashMap::default();
 
         let vm = VM {
             vm_id: 1,
@@ -43,6 +45,7 @@ impl<'insn> VM<'insn> {
             cur_irep: top_irep.clone(),
             pc: 0,
             class_arena,
+            const_arena,
             target_class: None,
             callinfo_vec: Vec::new(),
             exception: None,
@@ -60,6 +63,24 @@ impl<'insn> VM<'insn> {
 
         self.class_arena
             .insert(klass::KLASS_SYM_ID_OBJECT as usize, object_class);
+        self.const_arena.insert(
+            "Object".to_string(),
+            Rc::new(RObject::Class {
+                class_index: objclass_sym,
+            }),
+        );
+
+        let random_class = klass::new_builtin_random_class();
+        let random_class = Rc::new(RefCell::new(random_class));
+        let random_sym = random_class.as_ref().borrow().sym_id as usize;
+        self.class_arena
+            .insert(klass::KLASS_SYM_ID_RANDOM as usize, random_class);
+        self.const_arena.insert(
+            "Random".to_string(),
+            Rc::new(RObject::Class {
+                class_index: random_sym,
+            }),
+        );
 
         let top_self = RObject::RInstance {
             class_index: objclass_sym,
@@ -257,7 +278,9 @@ pub fn eval_insn1(
         OpCode::STRING => {
             let (a, b) = fetched.as_bb()?;
             let strval = &irep.pool[b as usize];
-            let RPool::StaticStr(s) = strval else { unreachable!("not string const") };
+            let RPool::StaticStr(s) = strval else {
+                unreachable!("not string const")
+            };
             let regval = RObject::RString(s.to_str().unwrap().to_string());
             vm.regs.insert(a as usize, Rc::new(regval));
         }

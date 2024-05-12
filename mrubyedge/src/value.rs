@@ -170,6 +170,7 @@ pub struct RClass<'insn> {
     pub sym_id: u32,
     // pub num_builtin_method: usize,
     pub super_klass: Rc<Option<Box<RClass<'insn>>>>,
+    pub static_methods: HashMap<String, RMethod<'insn>>,
     pub methods: HashMap<String, RMethod<'insn>>,
 }
 

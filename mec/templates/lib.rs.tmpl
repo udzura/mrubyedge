@@ -9,6 +9,8 @@ use mrubyedge::{
 };
 
 use std::rc::Rc;
+use std::cell::RefCell;
+use std::any::Any;
 
 const DATA: &'static [u8] = include_bytes!("./{{ file_basename }}.mrb");
 const MEMORY_INDEX: u32 = 0;
@@ -52,6 +54,7 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     let objclass_sym = vm.target_class.unwrap() as usize;
     let top_self = RObject::RInstance {
         class_index: objclass_sym,
+	data: Rc::new(RefCell::new(Box::new(()) as Box<dyn Any>)),
     };
 
 {% set index = 1 %}

@@ -46,7 +46,7 @@ pub fn mrb_funcall<'insn>(
                     }
                 },
                 None => {
-                    eprint!("todo: method_missing");
+                    eprint!("todo: method_missing {}\n", &sym);
                     return Err(Error::NoMethod);
                 }
             }
@@ -79,7 +79,7 @@ pub fn mrb_funcall<'insn>(
                     }
                 },
                 None => {
-                    eprint!("todo: method_missing");
+                    eprint!("todo: method_missing {}\n", &sym);
                     return Err(Error::NoMethod);
                 }
             }

@@ -148,7 +148,7 @@ pub fn new_builtin_time_class() -> RClass<'static> {
         sym_id: KLASS_SYM_ID_TIME,
         super_klass: Rc::new(None),
         static_methods,
-        methods: HashMap::new(),
+        methods,
     }
 }
 

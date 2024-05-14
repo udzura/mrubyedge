@@ -1,6 +1,6 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::{any::Any, cell::RefCell};
 
 // use crate::rite::binfmt::*;
 use crate::rite::insn::{Fetched, OpCode};
@@ -84,6 +84,7 @@ impl<'insn> VM<'insn> {
 
         let top_self = RObject::RInstance {
             class_index: objclass_sym,
+            data: Rc::new(RefCell::new(Box::new(()) as Box<dyn Any>)),
         };
         self.regs.insert(0, Rc::new(top_self));
 
@@ -302,6 +303,7 @@ pub fn eval_insn1(
             let arg_count = c;
             let cur_self = RObject::RInstance {
                 class_index: vm.target_class.unwrap(),
+                data: Rc::new(RefCell::new(Box::new(()) as Box<dyn Any>)),
             };
 
             let sym = cur_irep.syms[b as usize]

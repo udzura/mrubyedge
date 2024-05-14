@@ -24,7 +24,7 @@ pub fn mrb_funcall<'insn>(
             match klass.static_methods.get(&sym) {
                 Some(method) => match &method.body {
                     Method::CMethod(func) => {
-                        let ret = func(vm, args);
+                        let ret = func(vm, recv, args);
                         return Ok(ret);
                     }
                     Method::RubyMethod(body) => {
@@ -51,13 +51,13 @@ pub fn mrb_funcall<'insn>(
                 }
             }
         }
-        RObject::RInstance { class_index } => {
+        RObject::RInstance { class_index, .. } => {
             let klass = vm.class_arena.get(class_index).unwrap().clone();
             let klass = klass.as_ref().borrow();
             match klass.methods.get(&sym) {
                 Some(method) => match &method.body {
                     Method::CMethod(func) => {
-                        let ret = func(vm, args);
+                        let ret = func(vm, recv, args);
                         return Ok(ret);
                     }
                     Method::RubyMethod(body) => {

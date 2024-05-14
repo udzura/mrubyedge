@@ -3,6 +3,7 @@ use std::{collections::HashMap, rc::Rc};
 use crate::vm::*;
 
 pub const KLASS_SYM_ID_OBJECT: u32 = 1;
+pub const KLASS_SYM_ID_TIME: u32 = 1 << 6;
 pub const KLASS_SYM_ID_RANDOM: u32 = 1 << 7;
 
 pub fn new_builtin_object_class() -> RClass<'static> {
@@ -30,7 +31,11 @@ pub fn new_builtin_object_class() -> RClass<'static> {
     }
 }
 
-fn builtin_object_imethod_puts<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> Rc<RObject> {
+fn builtin_object_imethod_puts<'insn>(
+    _vm: &mut VM<'insn>,
+    _: &RObject,
+    args: &[Rc<RObject>],
+) -> Rc<RObject> {
     if args.len() < 1 {
         eprintln!("invalid arg size");
         return Rc::new(RObject::Nil);
@@ -48,7 +53,11 @@ fn builtin_object_imethod_puts<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>])
     Rc::new(RObject::Nil)
 }
 
-fn builtin_object_imethod_p<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> Rc<RObject> {
+fn builtin_object_imethod_p<'insn>(
+    _vm: &mut VM<'insn>,
+    _: &RObject,
+    args: &[Rc<RObject>],
+) -> Rc<RObject> {
     if args.len() < 1 {
         eprintln!("invalid arg size");
         return Rc::new(RObject::Nil);
@@ -77,7 +86,11 @@ pub fn new_builtin_random_class() -> RClass<'static> {
     }
 }
 
-fn builtin_random_cmethod_rand<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> Rc<RObject> {
+fn builtin_random_cmethod_rand<'insn>(
+    _vm: &mut VM<'insn>,
+    _: &RObject,
+    args: &[Rc<RObject>],
+) -> Rc<RObject> {
     let mut buf = [0u8; 4];
     getrandom::getrandom(&mut buf).unwrap();
     let rand = unsafe { std::mem::transmute::<[u8; 4], u32>(buf) };

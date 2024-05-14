@@ -1,6 +1,8 @@
 use crate::rite::{self, Error, Irep};
 use crate::vm::VM;
 
+use std::any::Any;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::rc::Rc;
@@ -83,10 +85,17 @@ pub struct RSym {
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum RObject {
-    Class { class_index: usize },
-    RInstance { class_index: usize },
+    Class {
+        class_index: usize,
+    },
+    RInstance {
+        class_index: usize,
+        data: Rc<RefCell<Box<dyn Any>>>,
+    },
     RString(String),
-    RProc { irep_index: usize },
+    RProc {
+        irep_index: usize,
+    },
     RInteger(i64),
     RFloat(f64),
     RBool(bool),
@@ -180,7 +189,7 @@ pub struct RMethod<'insn> {
     pub body: Method<'insn>,
 }
 
-type RFn = for<'insn> fn(&mut VM<'insn>, &[Rc<RObject>]) -> Rc<RObject>;
+type RFn = for<'insn> fn(&mut VM<'insn>, &RObject, &[Rc<RObject>]) -> Rc<RObject>;
 
 #[derive(Debug)]
 pub enum Method<'insn> {

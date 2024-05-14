@@ -1,4 +1,10 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    any::Any,
+    cell::RefCell,
+    collections::HashMap,
+    rc::Rc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::vm::*;
 
@@ -117,4 +123,69 @@ fn builtin_random_cmethod_rand<'insn>(
 
     eprintln!("Argument Error");
     return Rc::new(RObject::Nil);
+}
+
+pub fn new_builtin_time_class() -> RClass<'static> {
+    let mut static_methods = HashMap::new();
+    static_methods.insert(
+        "now".to_string(),
+        RMethod {
+            sym_id: 640001,
+            body: Method::CMethod(builtin_time_cmethod_now),
+        },
+    );
+
+    let mut methods = HashMap::new();
+    methods.insert(
+        "to_i".to_string(),
+        RMethod {
+            sym_id: 641001,
+            body: Method::CMethod(builtin_time_imethod_to_i),
+        },
+    );
+
+    RClass {
+        sym_id: KLASS_SYM_ID_TIME,
+        super_klass: Rc::new(None),
+        static_methods,
+        methods: HashMap::new(),
+    }
+}
+
+fn builtin_time_cmethod_now<'insn>(
+    _vm: &mut VM<'insn>,
+    _self: &RObject,
+    _args: &[Rc<RObject>],
+) -> Rc<RObject> {
+    let now = SystemTime::now();
+    let data = now.duration_since(UNIX_EPOCH).unwrap();
+    let data = data.as_nanos() as u64;
+    let data = Rc::new(RefCell::new(Box::new(data) as Box<dyn Any>));
+
+    let obj = RObject::RInstance {
+        class_index: (KLASS_SYM_ID_TIME as usize),
+        data,
+    };
+    Rc::new(obj)
+}
+
+fn builtin_time_imethod_to_i<'insn>(
+    _vm: &mut VM<'insn>,
+    selfobj: &RObject,
+    _args: &[Rc<RObject>],
+) -> Rc<RObject> {
+    if let RObject::RInstance {
+        class_index: _,
+        data,
+    } = selfobj
+    {
+        let unixnano = *data
+            .borrow()
+            .downcast_ref::<u64>()
+            .expect("Time should contains u64");
+        let ret = RObject::RInteger(unixnano as i64);
+        Rc::new(ret)
+    } else {
+        unreachable!("Time but not rinstance");
+    }
 }

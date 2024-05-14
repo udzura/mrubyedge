@@ -3,7 +3,7 @@
 extern crate bpaf;
 extern crate rand;
 
-const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "0.1.5";
+const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "0.1.6";
 
 use std::{fs::File, io::Read, path::PathBuf, process::Command};
 

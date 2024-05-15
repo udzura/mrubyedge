@@ -234,6 +234,22 @@ pub fn eval_insn1(
             }
         }
 
+        OpCode::SUB => {
+            let a = fetched.as_b()?;
+            let dst = a as usize;
+            let dst2 = dst + 1;
+            let target = vm.regs.remove(&dst).unwrap();
+            let target2 = vm.regs.get(&dst2).unwrap().clone();
+
+            if let RObject::RInteger(t1) = target.as_ref() {
+                if let RObject::RInteger(t2) = target2.as_ref() {
+                    let ans = *t1 - *t2;
+                    vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
+                    return Ok(());
+                }
+            }
+        }
+
         OpCode::LOADI_0
         | OpCode::LOADI_1
         | OpCode::LOADI_2

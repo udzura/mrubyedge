@@ -119,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 func_name: &def.name,
                 args_decl: def.args_decl(),
                 rettype_decl: def.rettype_decl(),
-                imoprted_body: def.imoprted_body(),
+                imported_body: def.imported_body(),
                 import_helper_var: def.import_helper_var(),
             })
         }

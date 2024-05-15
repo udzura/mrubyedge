@@ -23,7 +23,7 @@ pub struct RustFnTemplate<'a> {
 pub struct RustImportFnTemplate<'a> {
     pub func_name: &'a str,
     pub args_decl: &'a str,
-    pub imoprted_body: &'a str,
+    pub imported_body: &'a str,
     pub rettype_decl: &'a str,
     pub import_helper_var: &'a str,
 }

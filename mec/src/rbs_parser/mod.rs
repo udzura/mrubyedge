@@ -148,7 +148,7 @@ pub unsafe fn __set{0}(s: u32) {{
     }
 
     // for function importer
-    pub fn imoprted_body(&self) -> &str {
+    pub fn imported_body(&self) -> &str {
         let mut buf = String::new();
         for (i, typ) in self.argstype.iter().enumerate() {
             let tmp = match typ.as_str() {

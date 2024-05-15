@@ -36,8 +36,8 @@ extern "C" {
 
 {% for fn in ftypes_imports %}
 {{ fn.import_helper_var }}
-fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, args: &[Rc<RObject>]) -> Rc<RObject> {
-{{ fn.imoprted_body }}
+fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, _self: &RObject, args: &[Rc<RObject>]) -> Rc<RObject> {
+{{ fn.imported_body }}
 }
 {% endfor %}
 

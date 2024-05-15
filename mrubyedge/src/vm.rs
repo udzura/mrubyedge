@@ -205,6 +205,19 @@ pub fn eval_insn1(
             }
         }
 
+        OpCode::ADDI => {
+            let (a, b) = fetched.as_bb()?;
+            let dst = a as usize;
+            let val = b as i64;
+            let target = vm.regs.remove(&dst).unwrap();
+
+            if let RObject::RInteger(orig) = target.as_ref() {
+                let ans = *orig + val;
+                vm.regs.insert(dst, Rc::new(RObject::RInteger(ans)));
+                return Ok(());
+            }
+        }
+
         OpCode::SUBI => {
             let (a, b) = fetched.as_bb()?;
             let dst = a as usize;

@@ -70,29 +70,31 @@ impl<'insn> VM<'insn> {
             }),
         );
 
-        let random_class = klass::new_builtin_random_class();
-        let random_class = Rc::new(RefCell::new(random_class));
-        let random_sym = random_class.as_ref().borrow().sym_id as usize;
-        self.class_arena
-            .insert(klass::KLASS_SYM_ID_RANDOM as usize, random_class);
-        self.const_arena.insert(
-            "Random".to_string(),
-            Rc::new(RObject::Class {
-                class_index: random_sym,
-            }),
-        );
+        if cfg!(feature = "wasi") {
+            let random_class = klass::new_builtin_random_class();
+            let random_class = Rc::new(RefCell::new(random_class));
+            let random_sym = random_class.as_ref().borrow().sym_id as usize;
+            self.class_arena
+                .insert(klass::KLASS_SYM_ID_RANDOM as usize, random_class);
+            self.const_arena.insert(
+                "Random".to_string(),
+                Rc::new(RObject::Class {
+                    class_index: random_sym,
+                }),
+            );
 
-        let time_class = klass::new_builtin_time_class();
-        let time_class = Rc::new(RefCell::new(time_class));
-        let time_sym = time_class.as_ref().borrow().sym_id as usize;
-        self.class_arena
-            .insert(klass::KLASS_SYM_ID_TIME as usize, time_class);
-        self.const_arena.insert(
-            "Time".to_string(),
-            Rc::new(RObject::Class {
-                class_index: time_sym,
-            }),
-        );
+            let time_class = klass::new_builtin_time_class();
+            let time_class = Rc::new(RefCell::new(time_class));
+            let time_sym = time_class.as_ref().borrow().sym_id as usize;
+            self.class_arena
+                .insert(klass::KLASS_SYM_ID_TIME as usize, time_class);
+            self.const_arena.insert(
+                "Time".to_string(),
+                Rc::new(RObject::Class {
+                    class_index: time_sym,
+                }),
+            );
+        }
 
         let top_self = RObject::RInstance {
             class_index: objclass_sym,

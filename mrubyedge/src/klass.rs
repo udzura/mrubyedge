@@ -14,20 +14,22 @@ pub const KLASS_SYM_ID_RANDOM: u32 = 1 << 7;
 
 pub fn new_builtin_object_class() -> RClass<'static> {
     let mut methods = HashMap::new();
-    methods.insert(
-        "p".to_string(),
-        RMethod {
-            sym_id: 10000,
-            body: Method::CMethod(builtin_object_imethod_p),
-        },
-    );
-    methods.insert(
-        "puts".to_string(),
-        RMethod {
-            sym_id: 10001,
-            body: Method::CMethod(builtin_object_imethod_puts),
-        },
-    );
+    if cfg!(feature = "wasi") {
+        methods.insert(
+            "p".to_string(),
+            RMethod {
+                sym_id: 10000,
+                body: Method::CMethod(builtin_object_imethod_p),
+            },
+        );
+        methods.insert(
+            "puts".to_string(),
+            RMethod {
+                sym_id: 10001,
+                body: Method::CMethod(builtin_object_imethod_puts),
+            },
+        );
+    }
 
     RClass {
         sym_id: KLASS_SYM_ID_OBJECT,
@@ -37,6 +39,7 @@ pub fn new_builtin_object_class() -> RClass<'static> {
     }
 }
 
+#[cfg(feature = "wasi")]
 fn builtin_object_imethod_puts<'insn>(
     _vm: &mut VM<'insn>,
     _: &RObject,
@@ -59,6 +62,7 @@ fn builtin_object_imethod_puts<'insn>(
     Rc::new(RObject::Nil)
 }
 
+#[cfg(feature = "wasi")]
 fn builtin_object_imethod_p<'insn>(
     _vm: &mut VM<'insn>,
     _: &RObject,
@@ -74,6 +78,7 @@ fn builtin_object_imethod_p<'insn>(
     ret
 }
 
+#[cfg(feature = "wasi")]
 pub fn new_builtin_random_class() -> RClass<'static> {
     let mut static_methods = HashMap::new();
     static_methods.insert(
@@ -92,6 +97,7 @@ pub fn new_builtin_random_class() -> RClass<'static> {
     }
 }
 
+#[cfg(feature = "wasi")]
 fn builtin_random_cmethod_rand<'insn>(
     _vm: &mut VM<'insn>,
     _: &RObject,
@@ -125,6 +131,7 @@ fn builtin_random_cmethod_rand<'insn>(
     return Rc::new(RObject::Nil);
 }
 
+#[cfg(feature = "wasi")]
 pub fn new_builtin_time_class() -> RClass<'static> {
     let mut static_methods = HashMap::new();
     static_methods.insert(
@@ -152,6 +159,7 @@ pub fn new_builtin_time_class() -> RClass<'static> {
     }
 }
 
+#[cfg(feature = "wasi")]
 fn builtin_time_cmethod_now<'insn>(
     _vm: &mut VM<'insn>,
     _self: &RObject,
@@ -169,6 +177,7 @@ fn builtin_time_cmethod_now<'insn>(
     Rc::new(obj)
 }
 
+#[cfg(feature = "wasi")]
 fn builtin_time_imethod_to_i<'insn>(
     _vm: &mut VM<'insn>,
     selfobj: &RObject,

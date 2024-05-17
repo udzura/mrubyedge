@@ -9,7 +9,7 @@ license = "BSD-3-Clause"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-getrandom = "0.2.15"
+getrandom = { version = "0.2.15", optional = true }
 plain = "0.2.3"
 simple_endian = "0.2.1"
 
@@ -19,3 +19,8 @@ criterion = "0.5.1"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[features]
+default = [ "wasi" ]
+wasi = [ "getrandom" ]
+no-wasi = []

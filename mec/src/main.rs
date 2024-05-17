@@ -189,8 +189,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "wasm32-wasi"
     };
 
+    let feature = if opts.no_wasi { "no-wasi" } else { "default" };
+
     sh_do("rustup override set nightly 2>/dev/null")?;
-    sh_do(&format!("cargo build --target {} --release", target))?;
+    sh_do(&format!(
+        "cargo build --target {} --feature {} --release",
+        target, feature
+    ))?;
     sh_do(&format!(
         "cp ./target/{}/release/mywasm.wasm {}/{}.wasm",
         target,

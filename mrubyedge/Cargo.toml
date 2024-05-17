@@ -1,6 +1,6 @@
 [package]
 name = "mrubyedge"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Uchio Kondo <udzura@udzura.jp>"]
 description = "mruby/edge is yet another mruby that is specialized for running on WASM"

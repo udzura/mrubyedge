@@ -1,6 +1,6 @@
 [package]
 name = "mrubyedge"
-version = "0.1.9"
+version = "0.2.0"
 edition = "2021"
 authors = ["Uchio Kondo <udzura@udzura.jp>"]
 description = "mruby/edge is yet another mruby that is specialized for running on WASM"
@@ -10,7 +10,6 @@ license = "BSD-3-Clause"
 
 [dependencies]
 getrandom = { version = "0.2.14", optional = true }
-# libc = { version = "^0.2.154", optional = true }
 plain = "0.2.3"
 simple_endian = "0.2.1"
 

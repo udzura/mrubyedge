@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies.mrubyedge]
 # fixme can be changed
 path = "{{ mruby_edge_crate_path }}"
+features = [ "{{ mrubyedge_feature }}"]
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

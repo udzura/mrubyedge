@@ -9,7 +9,8 @@ license = "BSD-3-Clause"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-getrandom = { version = "0.2.15", optional = true }
+getrandom = { version = "0.2.14", optional = true }
+# libc = { version = "^0.2.154", optional = true }
 plain = "0.2.3"
 simple_endian = "0.2.1"
 

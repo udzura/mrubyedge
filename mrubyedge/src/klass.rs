@@ -14,7 +14,8 @@ pub const KLASS_SYM_ID_RANDOM: u32 = 1 << 7;
 
 pub fn new_builtin_object_class() -> RClass<'static> {
     let mut methods = HashMap::new();
-    if cfg!(feature = "wasi") {
+    #[cfg(feature = "wasi")]
+    {
         methods.insert(
             "p".to_string(),
             RMethod {

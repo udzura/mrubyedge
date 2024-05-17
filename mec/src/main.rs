@@ -85,14 +85,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()))?;
     sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()))?;
 
+    let feature = if opts.no_wasi { "no-wasi" } else { "default" };
+
     if opts.debug_mruby_edge {
         let cargo_toml = CargoTomlDebug {
             mruby_edge_crate_path: "/opt/ghq/github.com/udzura/mrubyedge/mrubyedge",
+            mrubyedge_feature: feature,
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     } else {
         let cargo_toml = CargoToml {
             mrubyedge_version: MRUBY_EDGE_DEFAULT_VERSION,
+            mrubyedge_feature: feature,
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     }
@@ -189,13 +193,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "wasm32-wasi"
     };
 
-    let feature = if opts.no_wasi { "no-wasi" } else { "default" };
-
     sh_do("rustup override set nightly 2>/dev/null")?;
-    sh_do(&format!(
-        "cargo build --target {} --features {} --release",
-        target, feature
-    ))?;
+    sh_do(&format!("cargo build --target {} --release", target))?;
     sh_do(&format!(
         "cp ./target/{}/release/mywasm.wasm {}/{}.wasm",
         target,

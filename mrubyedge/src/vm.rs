@@ -70,7 +70,8 @@ impl<'insn> VM<'insn> {
             }),
         );
 
-        if cfg!(feature = "wasi") {
+        #[cfg(feature = "wasi")]
+        {
             let random_class = klass::new_builtin_random_class();
             let random_class = Rc::new(RefCell::new(random_class));
             let random_sym = random_class.as_ref().borrow().sym_id as usize;

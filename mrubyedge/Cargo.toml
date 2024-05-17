@@ -1,6 +1,6 @@
 [package]
 name = "mrubyedge"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 authors = ["Uchio Kondo <udzura@udzura.jp>"]
 description = "mruby/edge is yet another mruby that is specialized for running on WASM"
@@ -22,5 +22,5 @@ harness = false
 
 [features]
 default = [ "wasi" ]
-wasi = [ "getrandom" ]
+wasi = [ "dep:getrandom" ]
 no-wasi = []

@@ -193,7 +193,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     sh_do("rustup override set nightly 2>/dev/null")?;
     sh_do(&format!(
-        "cargo build --target {} --feature {} --release",
+        "cargo build --target {} --features {} --release",
         target, feature
     ))?;
     sh_do(&format!(

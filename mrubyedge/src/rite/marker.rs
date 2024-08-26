@@ -1,7 +1,4 @@
-use core::ascii::Char;
-use core::ascii::Char::*;
-
-pub const IREP: [Char; 4] = [CapitalI, CapitalR, CapitalE, CapitalP];
-pub const LVAR: [Char; 4] = [CapitalL, CapitalV, CapitalA, CapitalR];
-pub const DBG: [Char; 4] = [CapitalD, CapitalB, CapitalG, Null];
-pub const END: [Char; 4] = [CapitalE, CapitalN, CapitalD, Null];
+pub const IREP: [char; 4] = ['I', 'R', 'E', 'P'];
+pub const LVAR: [char; 4] = ['L', 'V', 'A', 'R'];
+pub const DBG: [char; 4] = ['D', 'B', 'G', '\0'];
+pub const END: [char; 4] = ['E', 'N', 'D', '\0'];

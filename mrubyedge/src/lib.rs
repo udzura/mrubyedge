@@ -1,7 +1,3 @@
-#![feature(ascii_char)]
-#![feature(ascii_char_variants)]
-#![feature(new_uninit)]
-
 pub mod eval;
 pub mod klass;
 pub mod rite;

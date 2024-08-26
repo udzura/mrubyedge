@@ -3,7 +3,6 @@ extern crate simple_endian;
 use super::binfmt::*;
 use super::Error;
 
-use core::ascii;
 use core::ffi::CStr;
 use core::mem;
 use std::ffi::CString;
@@ -196,15 +195,19 @@ pub fn section_skip(head: &[u8]) -> Result<usize, Error> {
     Ok(be32_to_u32(header.size) as usize)
 }
 
-pub fn peek4<'a>(src: &'a [u8]) -> Option<[ascii::Char; 4]> {
+pub fn peek4<'a>(src: &'a [u8]) -> Option<[char; 4]> {
     if src.len() < 4 {
         // EoD
         return None;
     }
-    if let Some([a, b, c, d]) = src[0..4].as_ascii() {
-        Some([*a, *b, *c, *d])
+    if let [a, b, c, d] = src[0..4] {
+	let a = char::from_u32(a as u32).unwrap();
+	let b = char::from_u32(b as u32).unwrap();
+	let c = char::from_u32(c as u32).unwrap();
+	let d = char::from_u32(d as u32).unwrap();
+	Some([a, b, c, d])
     } else {
-        None
+	None
     }
 }
 

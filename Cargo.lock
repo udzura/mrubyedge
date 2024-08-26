@@ -363,7 +363,7 @@ name = "mruby-objdump"
 version = "0.1.0"
 dependencies = [
  "plain",
- "simple_endian",
+ "simple_endian 0.2.1",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -375,7 +375,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80360fb2bdef85dbdd4374bc19cc3b3565ae53e995a781295d1dabe948e62513"
 dependencies = [
  "plain",
- "simple_endian",
+ "simple_endian 0.2.1",
 ]
 
 [[package]]
@@ -385,7 +385,7 @@ dependencies = [
  "criterion",
  "getrandom",
  "plain",
- "simple_endian",
+ "simple_endian 0.3.2",
 ]
 
 [[package]]
@@ -613,6 +613,12 @@ name = "simple_endian"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35bb59c226c54cf37f73c75af60d194ef604b66d622baef07b44f8caccb469ae"
+
+[[package]]
+name = "simple_endian"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "872b1ba2925d84fd02d5a3a0b7196b7b681cda5d64a214c6bb1aafb3827c458f"
 
 [[package]]
 name = "syn"

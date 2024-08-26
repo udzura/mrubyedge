@@ -11,7 +11,7 @@ license = "BSD-3-Clause"
 [dependencies]
 getrandom = { version = "0.2.14", optional = true }
 plain = "0.2.3"
-simple_endian = "0.2.1"
+simple_endian = "0.3"
 
 [dev-dependencies]
 criterion = "0.5.1"

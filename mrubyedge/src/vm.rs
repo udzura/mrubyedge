@@ -21,6 +21,7 @@ pub struct VM<'insn> {
     pub callinfo_vec: Vec<CallInfo<'insn>>,
     pub exception: Option<Box<RObject>>,
     pub regs: HashMap<usize, Rc<RObject>>,
+    pub ud: HashMap<usize, Rc<RefCell<Box<dyn Any>>>>,
 }
 
 impl<'insn> VM<'insn> {
@@ -50,6 +51,7 @@ impl<'insn> VM<'insn> {
             callinfo_vec: Vec::new(),
             exception: None,
             regs: HashMap::new(),
+	    ud: HashMap::new(),
         };
         vm
     }
@@ -121,6 +123,14 @@ impl<'insn> VM<'insn> {
         }
 
         Ok(())
+    }
+
+    pub fn register_ud(&mut self, index: usize, data: Rc<RefCell<Box<dyn Any>>>) -> () {
+	self.ud.insert(index, data.clone());
+    }
+
+    pub fn fetch_ud(&mut self, index: usize) -> Option<Rc<RefCell<Box<dyn Any>>>> {
+	self.ud.get(&index).cloned()
     }
 }
 

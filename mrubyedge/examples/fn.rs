@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use mrubyedge::{mrb_helper, vm::RObject};
 
@@ -22,6 +22,7 @@ fn main() {
 
     let objclass_sym = vm.target_class.unwrap() as usize;
     let top_self = RObject::RInstance {
+        data: Rc::new(RefCell::new(Box::new(()))),
         class_index: objclass_sym,
     };
     let args = vec![Rc::new(RObject::RString("WASM! 4".to_string()))];

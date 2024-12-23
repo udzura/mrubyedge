@@ -1,7 +1,7 @@
 extern crate mrubyedge;
 
 fn main() {
-    let bin = include_bytes!("./def.mrb");
+    let bin = include_bytes!("./def3.mrb");
     let rite = mrubyedge::rite::load(bin).unwrap();
     // dbg!(&rite);
     let mut vm = mrubyedge::vm::VM::open(rite);

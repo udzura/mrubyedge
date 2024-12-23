@@ -6,7 +6,7 @@ fn main() {
     dbg!(&rite);
     for (i, irep) in rite.irep.iter().enumerate() {
         println!("irep #{}", i);
-        mrubyedge::eval::eval_insn(irep.insn).unwrap();
+        // mrubyedge::eval::eval_insn(irep.insn).unwrap();
     }
     ()
 }

@@ -3,6 +3,7 @@ pub mod klass;
 pub mod rite;
 pub mod value;
 pub mod vm;
+pub mod yamrb;
 
 pub mod mrb_helper;
 

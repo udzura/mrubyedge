@@ -74,16 +74,7 @@ impl VM {
             let operand = op.operand;
             self.pc.set(pc + 1);
 
-            use crate::rite::insn::OpCode::*;
-            match op.code {
-                NOP => {
-                    op_nop(self, &operand);
-                }
-                RETURN => {
-                    op_return(self, &operand);
-                }
-                _ => { unimplemented!("Not supported yet")}
-            }
+            consume_expr(self, op.code, &operand);
 
             if self.flag_preemption.get() {
                 break;

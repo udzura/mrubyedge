@@ -23,7 +23,7 @@ pub enum RType {
 pub enum RValue {
     Bool(bool),
     Symbol(RSym),
-    Integer(u64),
+    Integer(i64),
     Float(f64),
     Class(Rc<RClass>),
     Instance(RInstance),
@@ -47,6 +47,13 @@ impl RObject {
         RObject {
             tt: RType::Nil,
             value: RValue::Nil,
+        }
+    }
+
+    pub fn integer(n: i64) -> Self {
+        RObject {
+            tt: RType::Integer,
+            value: RValue::Integer(n),
         }
     }
 }

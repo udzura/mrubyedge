@@ -42,6 +42,15 @@ pub struct RObject {
     pub value: RValue
 }
 
+impl RObject {
+    pub fn nil() -> Self {
+        RObject {
+            tt: RType::Nil,
+            value: RValue::Nil,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RClass {
     pub sym_id: RSym,

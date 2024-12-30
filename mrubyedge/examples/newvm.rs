@@ -1,4 +1,6 @@
 extern crate mrubyedge;
+use std::rc::Rc;
+
 use mrubyedge::yamrb::*;
 use mrubyedge::rite::insn::OpCode;
 use mrubyedge::rite::insn::Fetched;
@@ -14,12 +16,14 @@ fn main() {
             op::Op { code: OpCode::NOP, operand: Fetched::Z, pos: 0, len: 1 },
             op::Op { code: OpCode::NOP, operand: Fetched::Z, pos: 0, len: 1 },
             op::Op { code: OpCode::NOP, operand: Fetched::Z, pos: 0, len: 1 },
-            op::Op { code: OpCode::RETURN, operand: Fetched::B(1), pos: 0, len: 1 },
+            op::Op { code: OpCode::RETURN, operand: Fetched::B(0), pos: 0, len: 1 },
         ],
         syms: Vec::new(),
         pool: Vec::new(),
         reps: Vec::new(),
     };
-    let vm = vm::VM::new_by_irep(irep);
-    vm.run().unwrap();
+    let mut vm = vm::VM::new_by_irep(irep);
+    vm.regs[0].replace(Rc::new(value::RObject::nil()));
+    let ret = vm.run().unwrap();
+    dbg!(ret);
 }

@@ -67,19 +67,20 @@ impl VM {
         }
     }
 
-    pub fn run(&self) -> Result<(), Box<dyn Error>>{
+    pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
         loop {
             let pc = self.pc.get();
             let op = self.current_irep.as_ref().code.get(pc).unwrap();
+            let operand = op.operand;
             self.pc.set(pc + 1);
 
             use crate::rite::insn::OpCode::*;
             match op.code {
                 NOP => {
-                    op_nop(self, &op.operand);
+                    op_nop(self, &operand);
                 }
                 RETURN => {
-                    op_return(self, &op.operand);
+                    op_return(self, &operand);
                 }
                 _ => { unimplemented!("Not supported yet")}
             }
@@ -91,7 +92,10 @@ impl VM {
 
         self.flag_preemption.set(false);
 
-        Ok(())
+        match self.regs[0].take() {
+            Some(v) => Ok(v),
+            None => Ok(Rc::new(RObject::nil()))
+        }
     }
 }
 

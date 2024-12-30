@@ -1,6 +1,6 @@
-use std::{collections::HashMap, ffi::c_void};
+use std::{collections::HashMap, ffi::c_void, rc::Rc};
 
-use super::{vm::IREP};
+use super::vm::IREP;
 
 #[derive(Debug, Clone, Copy)]
 pub enum RType {
@@ -25,7 +25,7 @@ pub enum RValue {
     Symbol(RSym),
     Integer(u64),
     Float(f64),
-    Class(RClass),
+    Class(Rc<RClass>),
     Instance(RInstance),
     Proc(RProc),
     Array(Vec<RObject>),
@@ -69,4 +69,12 @@ pub struct RProc {
 #[derive(Debug, Clone)]
 pub struct RSym {
     pub name: String
+}
+
+impl From<&'static str> for RSym {
+    fn from(value: &'static str) -> Self {
+        Self {
+            name: value.to_string(),
+        }
+    }
 }

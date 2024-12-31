@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi::c_void, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ffi::c_void, rc::Rc};
 
 use super::vm::IREP;
 
@@ -62,7 +62,7 @@ impl RObject {
 pub struct RClass {
     pub sym_id: RSym,
     pub super_class: Option<Box<RClass>>,
-    pub procs: HashMap<String, RProc>,
+    pub procs: RefCell<HashMap<String, RProc>>,
 }
 
 #[derive(Debug, Clone)]
@@ -76,15 +76,23 @@ pub struct RInstance {
 #[derive(Debug, Clone)]
 pub struct RProc {
     pub is_rb_func: bool,
-    pub sym_id: RSym,
-    pub next: Box<RProc>,
-    pub irep: Box<IREP>,
-    pub func: Box<*const c_void>, // TODO: can we cast this into fn pointer?
+    pub sym_id: RefCell<RSym>,
+    pub next: Option<Box<RProc>>,
+    pub irep: Option<Box<IREP>>,
+    pub func: Option<Box<*const c_void>>, // TODO: can we cast this into fn pointer?
 }
 
 #[derive(Debug, Clone)]
 pub struct RSym {
     pub name: String
+}
+
+impl RSym {
+    pub fn new(name: String) -> Self {
+        Self {
+            name
+        }
+    }
 }
 
 impl From<&'static str> for RSym {

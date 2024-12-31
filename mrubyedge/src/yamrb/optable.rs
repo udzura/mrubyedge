@@ -1,10 +1,10 @@
 // use std::rc::Rc;
 
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::rite::insn::{Fetched, OpCode};
 
-use super::{value::{RObject, RValue}, vm::VM};
+use super::{value::{RObject, RSym, RValue}, vm::VM};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
 // OPCODE(NOP,        Z)        /* no operation */
@@ -280,9 +280,9 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // ARGARY => {
         //     // op_argary(vm, &operand);
         // }
-        // ENTER => {
-        //     // op_enter(vm, &operand);
-        // }
+        ENTER => {
+            op_enter(vm, &operand);
+        }
         // KEY_P => {
         //     // op_key_p(vm, &operand);
         // }
@@ -388,9 +388,9 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // BLOCK => {
         //     // op_block(vm, &operand);
         // }
-        // METHOD => {
-        //     // op_method(vm, &operand);
-        // }
+        METHOD => {
+            op_method(vm, &operand);
+        }
         // RANGE_INC => {
         //     // op_range_inc(vm, &operand);
         // }
@@ -409,9 +409,9 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // EXEC => {
         //     // op_exec(vm, &operand);
         // }
-        // DEF => {
-        //     // op_def(vm, &operand);
-        // }
+        DEF => {
+            op_def(vm, &operand);
+        }
         // ALIAS => {
         //     // op_alias(vm, &operand);
         // }
@@ -421,9 +421,9 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // SCLASS => {
         //     // op_sclass(vm, &operand);
         // }
-        // TCLASS => {
-        //     // op_tclass(vm, &operand);
-        // }
+        TCLASS => {
+            op_tclass(vm, &operand);
+        }
         // DEBUG => {
         //     // op_debug(vm, &operand);
         // }
@@ -481,6 +481,11 @@ pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
     vm.regs[a as usize].replace(val.unwrap());
 }
 
+pub(crate) fn op_enter(_vm: &mut VM, operand: &Fetched) {
+    let _a = operand.as_w().unwrap();
+    // TODO: not yet used this insn
+}
+
 pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     // TODO: handle callinfo stack...
     let a = operand.as_b().unwrap() as usize;
@@ -503,6 +508,52 @@ pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
     };
     vm.regs[a].replace(Rc::new(result));
 }
+
+pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let irep = Some(Box::new(vm.current_irep.reps[b as usize].clone()));
+    let val = RObject {
+        tt: super::value::RType::Proc,
+        value: super::value::RValue::Proc(super::value::RProc {
+            irep,
+            is_rb_func: true,
+            sym_id: RefCell::new(RSym::new("".to_string())),
+            next: None,
+            func: None,
+        }),
+    };
+    vm.regs[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let klass = vm.regs[a as usize].as_ref().cloned().unwrap();
+    let method = vm.regs[(a + 1) as usize].as_ref().cloned().unwrap();
+    let sym = vm.current_irep.syms[b as usize].clone();
+
+    let klass = klass.as_ref();
+    let method = method.as_ref();
+    if let (RValue::Class(klass), RValue::Proc(method)) = (&klass.value, &method.value) {
+        let mut procs = klass.procs.borrow_mut();
+        procs.insert(sym.name.clone(), method.clone());
+    } else {
+        unreachable!("DEF must be called on class");
+    }
+    vm.regs[a as usize].replace(Rc::new(RObject {
+        tt: super::value::RType::Symbol,
+        value: super::value::RValue::Symbol(sym),
+    }));
+}
+
+pub(crate) fn op_tclass(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let klass = vm.object_class.clone();
+    let val = RObject {
+        tt: super::value::RType::Class,
+        value: super::value::RValue::Class(klass),
+    };
+    vm.regs[a].replace(Rc::new(val));
+} 
 
 pub(crate) fn op_stop(vm: &mut VM, _operand: &Fetched) {
     vm.flag_preemption.set(true);

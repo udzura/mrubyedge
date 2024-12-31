@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::error::Error;
 use std::rc::Rc;
 use std::collections::HashMap;
@@ -36,7 +36,7 @@ impl VM {
             RClass {
                 sym_id: "Object".into(),
                 super_class: None,
-                procs: HashMap::new(),
+                procs: RefCell::new(HashMap::new()),
             }
         );
 

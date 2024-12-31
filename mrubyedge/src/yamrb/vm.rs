@@ -99,7 +99,7 @@ pub struct IREP {
     pub plen: usize,
     pub code: Vec<Op>,
     pub syms: Vec<RSym>,
-    pub pool: Vec<RObject>,
+    pub pool: Vec<Rc<RObject>>,
     pub reps: Vec<IREP>
 }
 

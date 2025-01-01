@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use super::optable::*;
-use super::value::{RClass, RInstance, RObject, RSym, RType, RValue};
+use super::value::*;
 use super::op::Op;
 
 const MAX_REGS_SIZE: usize = 256;
@@ -126,7 +126,7 @@ pub struct IREP {
     pub plen: usize,
     pub code: Vec<Op>,
     pub syms: Vec<RSym>,
-    pub pool: Vec<Rc<RObject>>,
+    pub pool: Vec<RPool>,
     pub reps: Vec<IREP>
 }
 

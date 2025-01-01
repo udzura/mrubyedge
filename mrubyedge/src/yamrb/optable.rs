@@ -1,5 +1,3 @@
-// use std::rc::Rc;
-
 use std::{cell::RefCell, rc::Rc};
 
 use crate::rite::insn::{Fetched, OpCode};
@@ -338,12 +336,12 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         GE => {
             op_ge(vm, &operand);
         }
-        // ARRAY => {
-        //     // op_array(vm, &operand);
-        // }
-        // ARRAY2 => {
-        //     // op_array2(vm, &operand);
-        // }
+        ARRAY => {
+            op_array(vm, &operand);
+        }
+        ARRAY2 => {
+            op_array2(vm, &operand);
+        }
         // ARYCAT => {
         //     // op_arycat(vm, &operand);
         // }
@@ -365,15 +363,15 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // INTERN => {
         //     // op_intern(vm, &operand);
         // }
-        // SYMBOL => {
-        //     // op_symbol(vm, &operand);
-        // }
-        // STRING => {
-        //     // op_string(vm, &operand);
-        // }
-        // STRCAT => {
-        //     // op_strcat(vm, &operand);
-        // }
+        SYMBOL => {
+            op_symbol(vm, &operand);
+        }
+        STRING => {
+            op_string(vm, &operand);
+        }
+        STRCAT => {
+            op_strcat(vm, &operand);
+        }
         // HASH => {
         //     // op_hash(vm, &operand);
         // }
@@ -487,6 +485,8 @@ pub(crate) fn op_loadi_n(vm: &mut VM, n: i32, operand: &Fetched) {
 pub(crate) fn op_loadl(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_irep.pool[b as usize].clone();
+    // TODO: support other rpool types?
+    let val = Rc::new(RObject::string(val.as_str().to_string()));
     vm.current_regs()[a as usize].replace(val);
 }
 
@@ -908,6 +908,64 @@ pub(crate) fn op_ge(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_array(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    do_op_array(vm, a as usize, a as usize, b as usize);
+}
+
+pub(crate) fn op_array2(vm: &mut VM, operand: &Fetched) {
+    let (a, b, c) = operand.as_bbb().unwrap();
+    do_op_array(vm, a as usize, b as usize, c as usize);
+}
+
+fn do_op_array(vm: &mut VM, this: usize, start: usize, n: usize) {
+    let mut ary = Vec::with_capacity(n);
+    for i in 0..n {
+        if this == start && i == 0 {
+            ary.push(vm.current_regs()[start as usize].take().unwrap());
+        } else {
+            ary.push(vm.current_regs()[(start + i) as usize].clone().unwrap());
+        }
+    }
+    let val = RObject {
+        tt: super::value::RType::Array,
+        value: super::value::RValue::Array(ary),
+    };
+    vm.current_regs()[this].replace(Rc::new(val));
+}
+
+pub(crate) fn op_symbol(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let symstr = vm.current_irep.pool[b as usize].as_str().to_string();
+    let sym = RSym::new(symstr);
+    let val = RObject::symbol(sym);
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_string(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let str = vm.current_irep.pool[b as usize].as_str().to_string();
+    let val = RObject::string(str);
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].clone().unwrap();
+    let val2 = vm.current_regs()[b].clone().unwrap();
+    match (&val1.value, &val2.value) {
+        (RValue::String(s1), RValue::String(s2)) => {
+            let mut s1 = s1.borrow_mut();
+            let s2 = s2.borrow();
+            s1.push_str(&s2);
+        }
+        _ => {
+            unreachable!("strcat supports only string")
+        }
+    };
 }
 
 pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {

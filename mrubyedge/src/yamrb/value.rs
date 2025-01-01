@@ -28,10 +28,10 @@ pub enum RValue {
     Class(Rc<RClass>),
     Instance(RInstance),
     Proc(RProc),
-    Array(Vec<RObject>),
-    Hash(HashMap<String, RObject>),
-    String(String),
-    Range(Box<RObject>, Box<RObject>),
+    Array(Vec<Rc<RObject>>),
+    Hash(HashMap<String, Rc<RObject>>),
+    String(RefCell<String>),
+    Range(Rc<RObject>, Rc<RObject>),
     Data,
     Nil,
 }
@@ -81,7 +81,28 @@ impl RObject {
     pub fn string(s: String) -> Self {
         RObject {
             tt: RType::String,
-            value: RValue::String(s),
+            value: RValue::String(RefCell::new(s)),
+        }
+    }
+
+    pub fn array(v: Vec<Rc<RObject>>) -> Self {
+        RObject {
+            tt: RType::Array,
+            value: RValue::Array(v),
+        }
+    }
+
+    pub fn hash(h: HashMap<String, Rc<RObject>>) -> Self {
+        RObject {
+            tt: RType::Hash,
+            value: RValue::Hash(h),
+        }
+    }
+
+    pub fn class(c: Rc<RClass>) -> Self {
+        RObject {
+            tt: RType::Class,
+            value: RValue::Class(c),
         }
     }
 
@@ -111,14 +132,24 @@ impl RObject {
 #[derive(Debug, Clone)]
 pub struct RClass {
     pub sym_id: RSym,
-    pub super_class: Option<Box<RClass>>,
+    pub super_class: Option<Rc<RClass>>,
     pub procs: RefCell<HashMap<String, RProc>>,
     pub consts: RefCell<HashMap<String, Rc<RObject>>>,
 }
 
 impl RClass {
+    pub fn new(name: &str, super_class: Option<Rc<RClass>>) ->Self {
+        let name = name.to_string();
+        RClass {
+            sym_id: RSym::new(name),
+            super_class,
+            procs: RefCell::new(HashMap::new()),
+            consts: RefCell::new(HashMap::new()),
+        }
+    }
+
     pub fn getmcnst(&self, name: &str) -> Option<Rc<RObject>> {
-        let consts = self.consts.borrow();
+        let consts   = self.consts.borrow();
         consts.get(name).map(|v| v.clone())
     }
 }
@@ -157,6 +188,21 @@ impl From<&'static str> for RSym {
     fn from(value: &'static str) -> Self {
         Self {
             name: value.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum RPool {
+    Str(String),
+    Data(Vec<u8>),
+}
+
+impl RPool {
+    pub fn as_str(&self) -> &str {
+        match self {
+            RPool::Str(s) => s,
+            _ => unreachable!("RPool is not a string...?"),
         }
     }
 }

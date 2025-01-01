@@ -138,6 +138,24 @@ impl RObject {
             _ => unimplemented!("Key should be one of String, Integer, Symbol, or Boolean for now"),
         }
     }
+
+    pub fn get_class(&self) -> Rc<RClass> {
+        match &self.value {
+            RValue::Class(_) => todo!("return Class class"),
+            RValue::Instance(i) => i.class.clone(),
+            RValue::Bool(_b) => todo!("return True or False class"),
+            RValue::Symbol(_) => todo!("return Symbol class"),
+            RValue::Integer(_) => todo!("return Integer class"),
+            RValue::Float(_) => todo!("return Float class"),
+            RValue::Proc(_) => todo!("return Proc class"),
+            RValue::Array(_) => todo!("return Array class"),
+            RValue::Hash(_) => todo!("return Hash class"),
+            RValue::String(_) => todo!("return String class"),
+            RValue::Range(_, _, _) => todo!("return Range class"),
+            RValue::Data => todo!("return ...? class"),
+            RValue::Nil => todo!("return NilClass"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

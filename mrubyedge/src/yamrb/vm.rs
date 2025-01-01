@@ -27,6 +27,7 @@ pub struct VM {
 
     // common class
     pub object_class: Rc<RClass>,
+    pub builtin_class_table: HashMap<&'static str, Rc<RClass>>,
 
     pub globals: HashMap<String, Rc<RObject>>,
     pub consts: HashMap<String, Rc<RObject>>,
@@ -37,6 +38,7 @@ impl VM {
         let irep = Rc::new(irep);
         let globals = HashMap::new();
         let mut consts = HashMap::new();
+        let mut builtin_class_table = HashMap::new();
 
         let object_class = Rc::new(
             RClass {
@@ -50,6 +52,7 @@ impl VM {
             tt: RType::Class,
             value: RValue::Class(object_class.clone()),
         }));
+        builtin_class_table.insert("Object", object_class.clone());
 
         let id = 1; // TODO generator
         let bytecode = Vec::new();
@@ -75,6 +78,7 @@ impl VM {
             error_code,
             flag_preemption,
             object_class,
+            builtin_class_table,
             globals,
             consts,
         }
@@ -82,6 +86,7 @@ impl VM {
 
     pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
         let class = self.object_class.clone();
+        // Insert top_self
         self.current_regs()[0].replace(Rc::new(RObject{
             tt: RType::Instance,
             value: RValue::Instance(RInstance {
@@ -127,7 +132,7 @@ pub struct IREP {
     pub code: Vec<Op>,
     pub syms: Vec<RSym>,
     pub pool: Vec<RPool>,
-    pub reps: Vec<IREP>
+    pub reps: Vec<Rc<IREP>>
 }
 
 #[derive(Debug, Clone)]

@@ -74,7 +74,7 @@ fn main() {
         ],
         syms: vec![value::RSym::new("do_add".to_string())],
         pool: Vec::new(),
-        reps: vec![irep1],
+        reps: vec![Rc::new(irep1)],
     };
     let mut vm = vm::VM::new_by_irep(irep0);
     vm.regs[0].replace(Rc::new(value::RObject::nil()));

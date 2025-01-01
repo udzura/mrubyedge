@@ -265,15 +265,15 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         SSEND => {
             op_ssend(vm, &operand);
         }
-        // SSENDB => {
-        //     // op_ssendb(vm, &operand);
-        // }
+        SSENDB => {
+            op_ssendb(vm, &operand);
+        }
         SEND => {
             op_send(vm, &operand);
         }
-        // SENDB => {
-        //     // op_sendb(vm, &operand);
-        // }
+        SENDB => {
+            op_sendb(vm, &operand);
+        }
         CALL => {
             op_call(vm, &operand);
         }
@@ -409,9 +409,9 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // MODULE => {
         //     // op_module(vm, &operand);
         // }
-        // EXEC => {
-        //     // op_exec(vm, &operand);
-        // }
+        EXEC => {
+            op_exec(vm, &operand);
+        }
         DEF => {
             op_def(vm, &operand);
         }
@@ -682,20 +682,35 @@ pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_ssend(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
-    do_op_send(vm, 0, a, b, c);
+    do_op_send(vm, 0, None, a, b, c);
+}
+
+pub(crate) fn op_ssendb(vm: &mut VM, operand: &Fetched) {
+    let (a, b, c) = operand.as_bbb().unwrap();
+    do_op_send(vm, 0, Some(a as usize + c as usize + 1), a, b, c);
 }
 
 pub(crate) fn op_send(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
-    do_op_send(vm, a as usize, a, b, c);
+    do_op_send(vm, a as usize, None, a, b, c);
 }
 
-pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, a: u8, b: u8, c: u8) {
+pub(crate) fn op_sendb(vm: &mut VM, operand: &Fetched) {
+    let (a, b, c) = operand.as_bbb().unwrap();
+    do_op_send(vm, a as usize, Some(a as usize + c as usize + 1), a, b, c);
+}
+
+pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize>, a: u8, b: u8, c: u8) {
     let block_index = (a + c + 1) as usize;
 
     let recv = vm.current_regs()[recv_index].as_ref().cloned().unwrap();
-    let args = (0..c).
+    let mut args = (0..c).
         map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap()).collect::<Vec<_>>();
+    if let Some(blk_index) = blk_index {
+        args.push(vm.current_regs()[blk_index].as_ref().cloned().unwrap());
+    } else {
+        args.push(Rc::new(RObject::nil()));
+    }
 
     let method_id = vm.current_irep.syms[b as usize].clone();
     let klass = match &recv.value {
@@ -1064,7 +1079,7 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let irep = Some(Rc::new(vm.current_irep.reps[b as usize].clone()));
+    let irep = Some(vm.current_irep.reps[b as usize].clone());
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
@@ -1080,7 +1095,7 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let irep = Some(Rc::new(vm.current_irep.reps[b as usize].clone()));
+    let irep = Some(vm.current_irep.reps[b as usize].clone());
     let val = RObject {
         tt: super::value::RType::Proc,
         value: super::value::RValue::Proc(super::value::RProc {
@@ -1138,6 +1153,20 @@ pub(crate) fn op_class(vm: &mut VM, operand: &Fetched) {
     };
     let klass = Rc::new(RClass::new(&name.name, Some(superclass)));
     vm.current_regs()[a as usize].replace(Rc::new(klass.into()));
+}
+
+pub(crate) fn op_exec(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let recv = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+
+    vm.current_regs()[a as usize].replace(recv.clone());
+    push_callinfo(vm, "<exec>".into(), 0);
+
+    vm.pc.set(0);
+    let irep = vm.irep.reps[b as usize].clone();
+    vm.current_irep = irep;
+    vm.current_regs_offset += a as usize;
+    vm.target_class = recv.get_class();
 }
 
 pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {

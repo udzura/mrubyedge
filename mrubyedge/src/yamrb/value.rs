@@ -99,6 +99,13 @@ impl RObject {
     pub fn is_truthy(&self) -> bool {
         !self.is_falsy()
     }
+
+    pub fn is_nil(&self) -> bool {
+        match self.tt {
+            RType::Nil => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

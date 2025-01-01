@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::rite::insn::{Fetched, OpCode};
 
-use super::{value::{RObject, RSym, RValue}, vm::{CALLINFO, VM}};
+use super::{value::{RObject, RSym, RValue}, vm::{CALLINFO, IREP, VM}};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
 // OPCODE(NOP,        Z)        /* no operation */
@@ -129,7 +129,7 @@ use super::{value::{RObject, RSym, RValue}, vm::{CALLINFO, VM}};
 
 pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
     use crate::rite::insn::OpCode::*;
-    dbg!(&code, &operand);
+    // dbg!(&code, &operand);
     match code {
         NOP => {
             op_nop(vm, &operand);
@@ -236,18 +236,18 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // SETIDX => {
         //     // op_setidx(vm, &operand);
         // }
-        // JMP => {
-        //     // op_jmp(vm, &operand);
-        // }
-        // JMPIF => {
-        //     // op_jmpif(vm, &operand);
-        // }
-        // JMPNOT => {
-        //     // op_jmpnot(vm, &operand);
-        // }
-        // JMPNIL => {
-        //     // op_jmpnil(vm, &operand);
-        // }
+        JMP => {
+            op_jmp(vm, &operand);
+        }
+        JMPIF => {
+            op_jmpif(vm, &operand);
+        }
+        JMPNOT => {
+            op_jmpnot(vm, &operand);
+        }
+        JMPNIL => {
+            op_jmpnil(vm, &operand);
+        }
         // JMPUW => {
         //     // op_jmpuw(vm, &operand);
         // }
@@ -460,6 +460,19 @@ fn push_callinfo(vm: &mut VM, method_id: RSym, n_args: usize) {
     vm.current_callinfo = Some(Rc::new(callinfo));
 }
 
+fn calcurate_pc(irep: &IREP, pc: usize, original_pc: usize) -> usize {
+    let mut next_pc = pc;
+    loop {
+        let op = irep.code.get(next_pc).expect("cannot fetch op anymore");
+        // dbg!((&op, original_pc));
+        if op.pos == original_pc {
+            break;
+        }
+        next_pc += 1;
+    }
+    next_pc
+}
+
 pub(crate) fn op_nop(_vm: &mut VM, _operand: &Fetched) {
     // NOOP
     dbg!("nop");
@@ -489,9 +502,42 @@ pub(crate) fn op_loadineg(vm: &mut VM, operand: &Fetched) {
     vm.current_regs()[a as usize].replace(Rc::new(val));
 }
 
+pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_s().unwrap();
+    let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), a as usize);
+    vm.pc.set(next_pc);
+}
+
+pub(crate) fn op_jmpif(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bs().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    if val.is_truthy() {
+        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), b as usize);
+        vm.pc.set(next_pc);
+    }
+}
+
+pub(crate) fn op_jmpnot(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bs().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    if val.is_falsy() {
+        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), b as usize);
+        vm.pc.set(next_pc);
+    }
+}
+
+pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bs().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    if val.is_nil() {
+        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), b as usize);
+        vm.pc.set(next_pc);
+    }
+}
+
 pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let val = vm.current_regs()[b as usize].take();
+    let val = vm.current_regs()[b as usize].clone();
     vm.current_regs()[a as usize].replace(val.unwrap());
 }
 

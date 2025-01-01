@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use super::optable::*;
-use super::value::{RClass, RObject, RSym};
+use super::value::{RClass, RInstance, RObject, RSym, RType, RValue};
 use super::op::Op;
 
 const MAX_REGS_SIZE: usize = 256;
@@ -18,7 +18,7 @@ pub struct VM {
     pub current_irep: Rc<IREP>,
     pub pc: Cell<usize>,
     pub regs: [Option<Rc<RObject>>; MAX_REGS_SIZE],
-    pub current_reg_offset: usize,
+    pub current_regs_offset: usize,
     pub current_callinfo: Option<Rc<CALLINFO>>,
     pub target_class: Rc<RClass>,
     pub error_code: u32,
@@ -45,7 +45,7 @@ impl VM {
         let current_irep = irep.clone();
         let pc = Cell::new(0);
         let regs: [Option<Rc<RObject>>; MAX_REGS_SIZE] = [const { None }; MAX_REGS_SIZE];
-        let current_reg_offset = 0;
+        let current_regs_offset = 0;
         let current_callinfo = None;
         let target_class = object_class.clone();
         let error_code = 0;
@@ -58,7 +58,7 @@ impl VM {
             current_irep,
             pc,
             regs,
-            current_reg_offset,
+            current_regs_offset,
             current_callinfo,
             target_class,
             error_code,
@@ -68,6 +68,16 @@ impl VM {
     }
 
     pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
+        let class = self.object_class.clone();
+        self.current_regs()[0].replace(Rc::new(RObject{
+            tt: RType::Instance,
+            value: RValue::Instance(RInstance {
+                class,
+                ivar: HashMap::new(),
+                data: Vec::new(),
+                ref_count: 1,
+            })
+        }));
         loop {
             let pc = self.pc.get();
             let op = self.current_irep.as_ref().code.get(pc).unwrap();
@@ -88,6 +98,10 @@ impl VM {
             None => Ok(Rc::new(RObject::nil()))
         }
     }
+
+    pub(crate) fn current_regs(&mut self) -> &mut [Option<Rc<RObject>>] {
+        &mut self.regs[self.current_regs_offset..]
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -105,10 +119,11 @@ pub struct IREP {
 
 #[derive(Debug, Clone)]
 pub struct CALLINFO {
-    pub prev: Box<CALLINFO>,
+    pub prev: Option<Rc<CALLINFO>>,
     pub method_id: RSym,
     pub pc_irep: Rc<IREP>,
-    pub ps: usize,
+    pub pc: usize,
     pub current_regs_offset: usize,
+    pub target_class: Rc<RClass>,
     pub n_args: usize,
 }

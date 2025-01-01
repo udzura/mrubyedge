@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::rite::insn::{Fetched, OpCode};
 
-use super::{value::{RObject, RSym, RValue}, vm::VM};
+use super::{value::{RObject, RSym, RValue}, vm::{CALLINFO, VM}};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
 // OPCODE(NOP,        Z)        /* no operation */
@@ -129,6 +129,7 @@ use super::{value::{RObject, RSym, RValue}, vm::VM};
 
 pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
     use crate::rite::insn::OpCode::*;
+    // dbg!(&code, &operand);
     match code {
         NOP => {
             op_nop(vm, &operand);
@@ -259,9 +260,9 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // RAISEIF => {
         //     // op_raiseif(vm, &operand);
         // }
-        // SSEND => {
-        //     // op_ssend(vm, &operand);
-        // }
+        SSEND => {
+            op_ssend(vm, &operand);
+        }
         // SSENDB => {
         //     // op_ssendb(vm, &operand);
         // }   
@@ -446,6 +447,19 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
     }
 }
 
+fn push_callinfo(vm: &mut VM, method_id: RSym, n_args: usize) {
+    let callinfo = CALLINFO {
+        prev: vm.current_callinfo.clone(),
+        method_id,
+        pc_irep: vm.current_irep.clone(),
+        pc: vm.pc.get(),
+        current_regs_offset: vm.current_regs_offset,
+        n_args,
+        target_class: vm.target_class.clone(),
+    };
+    vm.current_callinfo = Some(Rc::new(callinfo));
+}
+
 pub(crate) fn op_nop(_vm: &mut VM, _operand: &Fetched) {
     // NOOP
     dbg!("nop");
@@ -454,31 +468,69 @@ pub(crate) fn op_nop(_vm: &mut VM, _operand: &Fetched) {
 pub(crate) fn op_loadi_n(vm: &mut VM, n: i32, operand: &Fetched) {
     let a = operand.as_b().unwrap() as usize;
     let val = RObject::integer(n as i64);
-    vm.regs[a].replace(Rc::new(val));
+    vm.current_regs()[a].replace(Rc::new(val));
 }
 
 pub(crate) fn op_loadl(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_irep.pool[b as usize].clone();
-    vm.regs[a as usize].replace(val);
+    vm.current_regs()[a as usize].replace(val);
 }
 
 pub(crate) fn op_loadi(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let val = RObject::integer(b as i64);
-    vm.regs[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(Rc::new(val));
 }
 
 pub(crate) fn op_loadineg(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let val = RObject::integer(-(b as i64));
-    vm.regs[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(Rc::new(val));
 }
 
 pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let val = vm.regs[b as usize].take();
-    vm.regs[a as usize].replace(val.unwrap());
+    let val = vm.current_regs()[b as usize].take();
+    vm.current_regs()[a as usize].replace(val.unwrap());
+}
+
+pub(crate) fn op_ssend(vm: &mut VM, operand: &Fetched) {
+    let (a, b, c) = operand.as_bbb().unwrap();
+    let block_index = (a + c + 1) as usize;
+
+    let recv = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let args = (0..c).
+        map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap()).collect::<Vec<_>>();
+
+    let method_id = vm.current_irep.syms[b as usize].clone();
+    let klass = match &recv.value {
+        RValue::Instance(ins) => ins.class.as_ref(),
+        _ => unreachable!("send must be called on class")
+    };
+    let binding = klass.procs.borrow();
+    let method = binding.get(&method_id.name).unwrap();
+    if !method.is_rb_func {
+        let func = method.func.clone().unwrap();
+        let res = unsafe {
+            let fptr = func.cast::<fn(&mut VM, &[Rc<RObject>]) -> u32>();
+            (*fptr)(vm, &args)
+        };
+        if res != 0 {
+            vm.error_code = res;
+        }
+        for i in (a as usize + 1)..block_index {
+            vm.current_regs()[i].take();
+        }
+        return
+    }
+
+    vm.current_regs()[a as usize].replace(recv.clone());
+    push_callinfo(vm, method_id, c as usize);
+
+    vm.pc.set(0);
+    vm.current_irep = method.irep.as_ref().unwrap().clone();
+    vm.current_regs_offset += a as usize;
 }
 
 pub(crate) fn op_enter(_vm: &mut VM, operand: &Fetched) {
@@ -489,15 +541,40 @@ pub(crate) fn op_enter(_vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     // TODO: handle callinfo stack...
     let a = operand.as_b().unwrap() as usize;
-    let retval = vm.regs[a].take();
-    vm.regs[0].replace(retval.unwrap());
+    let old_irep = vm.current_irep.clone();
+    let nregs = old_irep.nregs;
+
+    let regs0 = vm.current_regs();
+    if let Some(regs_a) = regs0[a].take() {
+        regs0[0].replace(regs_a);
+    } else {
+        regs0[0].take();
+    }
+    for i in 1..nregs {
+        regs0[i].take();
+    }
+
+    let ci = vm.current_callinfo.take();
+    if ci.is_none() {
+        // Will stop VM: no more opereation
+        return;
+    }
+
+    let ci = ci.unwrap();
+    if ci.prev.is_some() {
+        vm.current_callinfo.replace(ci.prev.clone().unwrap());
+    }
+    vm.current_irep = ci.pc_irep.clone();
+    vm.pc.set(ci.pc);
+    vm.current_regs_offset = ci.current_regs_offset;
+    vm.target_class = ci.target_class.clone();
 }
 
 pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
-    let val1 = vm.regs[a].take().unwrap();
-    let val2 = vm.regs[b].take().unwrap();
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
     let result = match (&val1.value, &val2.value) {
         (RValue::Integer(n1), RValue::Integer(n2)) => {
             RObject::integer(n1 + n2)
@@ -506,12 +583,12 @@ pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
             unreachable!("add supports only integer")
         }
     };
-    vm.regs[a].replace(Rc::new(result));
+    vm.current_regs()[a].replace(Rc::new(result));
 }
 
 pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let irep = Some(Box::new(vm.current_irep.reps[b as usize].clone()));
+    let irep = Some(Rc::new(vm.current_irep.reps[b as usize].clone()));
     let val = RObject {
         tt: super::value::RType::Proc,
         value: super::value::RValue::Proc(super::value::RProc {
@@ -522,13 +599,13 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
             func: None,
         }),
     };
-    vm.regs[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(Rc::new(val));
 }
 
 pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let klass = vm.regs[a as usize].as_ref().cloned().unwrap();
-    let method = vm.regs[(a + 1) as usize].as_ref().cloned().unwrap();
+    let klass = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    let method = vm.current_regs()[(a + 1) as usize].as_ref().cloned().unwrap();
     let sym = vm.current_irep.syms[b as usize].clone();
 
     let klass = klass.as_ref();
@@ -539,7 +616,7 @@ pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
     } else {
         unreachable!("DEF must be called on class");
     }
-    vm.regs[a as usize].replace(Rc::new(RObject {
+    vm.current_regs()[a as usize].replace(Rc::new(RObject {
         tt: super::value::RType::Symbol,
         value: super::value::RValue::Symbol(sym),
     }));
@@ -552,7 +629,7 @@ pub(crate) fn op_tclass(vm: &mut VM, operand: &Fetched) {
         tt: super::value::RType::Class,
         value: super::value::RValue::Class(klass),
     };
-    vm.regs[a].replace(Rc::new(val));
+    vm.current_regs()[a].replace(Rc::new(val));
 } 
 
 pub(crate) fn op_stop(vm: &mut VM, _operand: &Fetched) {

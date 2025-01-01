@@ -67,7 +67,7 @@ pub struct RClass {
 
 #[derive(Debug, Clone)]
 pub struct RInstance {
-    pub class: Box<RClass>,
+    pub class: Rc<RClass>,
     pub ivar: HashMap<String, Box<RObject>>,
     pub data: Vec<u8>,
     pub ref_count: usize,
@@ -78,7 +78,7 @@ pub struct RProc {
     pub is_rb_func: bool,
     pub sym_id: RefCell<RSym>,
     pub next: Option<Box<RProc>>,
-    pub irep: Option<Box<IREP>>,
+    pub irep: Option<Rc<IREP>>,
     pub func: Option<Box<*const c_void>>, // TODO: can we cast this into fn pointer?
 }
 

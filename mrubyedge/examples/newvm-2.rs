@@ -21,8 +21,8 @@ fn main() {
     //     2 012 RETURN	R4		
     //
     let irep1 = vm::IREP {
-        nlocals: 0,
-        nregs: 0,
+        nlocals: 4,
+        nregs: 7,
         rlen: 0,
         iren: 5,
         plen: 0,
@@ -55,8 +55,8 @@ fn main() {
     //     7 026 STOP
     //
     let irep0 = vm::IREP {
-        nlocals: 0,
-        nregs: 0,
+        nlocals: 3,
+        nregs: 7,
         rlen: 0,
         iren: 8,
         plen: 0,
@@ -72,7 +72,7 @@ fn main() {
             op::Op { code: OpCode::RETURN, operand: Fetched::B(3), pos: 24, len: 2 },
             op::Op { code: OpCode::STOP, operand: Fetched::Z, pos: 26, len: 1 },
         ],
-        syms: Vec::new(),
+        syms: vec![value::RSym::new("do_add".to_string())],
         pool: Vec::new(),
         reps: vec![irep1],
     };

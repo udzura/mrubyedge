@@ -113,12 +113,20 @@ pub struct RClass {
     pub sym_id: RSym,
     pub super_class: Option<Box<RClass>>,
     pub procs: RefCell<HashMap<String, RProc>>,
+    pub consts: RefCell<HashMap<String, Rc<RObject>>>,
+}
+
+impl RClass {
+    pub fn getmcnst(&self, name: &str) -> Option<Rc<RObject>> {
+        let consts = self.consts.borrow();
+        consts.get(name).map(|v| v.clone())
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct RInstance {
     pub class: Rc<RClass>,
-    pub ivar: HashMap<String, Box<RObject>>,
+    pub ivar: RefCell<HashMap<String, Rc<RObject>>>,
     pub data: Vec<u8>,
     pub ref_count: usize,
 }

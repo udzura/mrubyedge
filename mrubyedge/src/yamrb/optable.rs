@@ -201,10 +201,10 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         //     // op_setsv(vm, &operand);
         // }
         GETIV => {
-            // op_getiv(vm, &operand);
+            op_getiv(vm, &operand);
         }
         SETIV => {
-            // op_setiv(vm, &operand);
+            op_setiv(vm, &operand);
         }
         // GETCV => {
         //     // op_getcv(vm, &operand);
@@ -213,13 +213,13 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         //     // op_setcv(vm, &operand);
         // }
         GETCONST => {
-            // op_getconst(vm, &operand);
+            op_getconst(vm, &operand);
         }
         SETCONST => {
-            // op_setconst(vm, &operand);
+            op_setconst(vm, &operand);
         }
         GETMCNST => {
-            // op_getmcnst(vm, &operand);
+            op_getmcnst(vm, &operand);
         }
         // SETMCNST => {
         //     // op_setmcnst(vm, &operand);
@@ -544,6 +544,73 @@ pub(crate) fn op_setgv(vm: &mut VM, operand: &Fetched) {
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     let sym = vm.current_irep.syms[b as usize].clone();
     vm.globals.insert(sym.name.clone(), val);
+}
+
+pub(crate) fn op_getiv(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let this = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let ivar = match &this.value {
+        RValue::Instance(ins) => ins.ivar.borrow().get(
+            &vm.current_irep.syms[b as usize].name,
+        ).unwrap().clone(),
+        _ => unreachable!("getiv must be called on instance")
+    };
+    vm.current_regs()[a as usize].replace(ivar);
+}
+
+pub(crate) fn op_setiv(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let this = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    match &this.value {
+        RValue::Instance(ins) => {
+            let mut ivar = ins.ivar.borrow_mut();
+            ivar.insert(
+                vm.current_irep.syms[b as usize].name.clone(),
+                val,
+            )
+        },
+        _ => unreachable!("setiv must be called on instance")
+    };
+}
+
+pub(crate) fn op_getconst(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let name = &vm.current_irep.syms[b as usize].name;
+    let cval = vm.consts.get(name).cloned();
+    match cval {
+        Some(val) => {
+            vm.current_regs()[a as usize].replace(val);
+        },
+        None => {
+            panic!("constant not found: {:?}", name);
+        }
+    }
+}
+
+pub(crate) fn op_setconst(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let name = vm.current_irep.syms[b as usize].name.clone();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    vm.consts.insert(name, val);
+}
+
+pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let recv = vm.current_regs()[a as usize].take().unwrap();
+    let name = vm.current_irep.syms[b as usize].name.clone();
+    let cval = match &recv.value {
+        RValue::Class(klass) => {klass.getmcnst(&name).clone()},
+        _ => unreachable!("getmcnst must be called on class or module")
+    };
+    match cval {
+        Some(val) => {
+            vm.current_regs()[a as usize].replace(val);
+        },
+        None => {
+            panic!("constant not found: {:?}", name);
+        }
+    }
 }
 
 pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched) {

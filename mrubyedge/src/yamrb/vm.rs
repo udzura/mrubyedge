@@ -29,19 +29,27 @@ pub struct VM {
     pub object_class: Rc<RClass>,
 
     pub globals: HashMap<String, Rc<RObject>>,
+    pub consts: HashMap<String, Rc<RObject>>,
 }
 
 impl VM {
     pub fn new_by_irep(irep: IREP) -> VM {
         let irep = Rc::new(irep);
+        let globals = HashMap::new();
+        let mut consts = HashMap::new();
+
         let object_class = Rc::new(
             RClass {
                 sym_id: "Object".into(),
                 super_class: None,
                 procs: RefCell::new(HashMap::new()),
+                consts: RefCell::new(HashMap::new()),
             }
         );
-        let globals = HashMap::new();
+        consts.insert("Object".to_string(), Rc::new(RObject {
+            tt: RType::Class,
+            value: RValue::Class(object_class.clone()),
+        }));
 
         let id = 1; // TODO generator
         let bytecode = Vec::new();
@@ -68,6 +76,7 @@ impl VM {
             flag_preemption,
             object_class,
             globals,
+            consts,
         }
     }
 
@@ -77,7 +86,7 @@ impl VM {
             tt: RType::Instance,
             value: RValue::Instance(RInstance {
                 class,
-                ivar: HashMap::new(),
+                ivar: RefCell::new(HashMap::new()),
                 data: Vec::new(),
                 ref_count: 1,
             })

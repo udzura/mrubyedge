@@ -30,7 +30,7 @@ pub enum RValue {
     Proc(RProc),
     Array(Vec<RObject>),
     Hash(HashMap<String, RObject>),
-    RString(String),
+    String(String),
     Range(Box<RObject>, Box<RObject>),
     Data,
     Nil,
@@ -50,11 +50,54 @@ impl RObject {
         }
     }
 
+    pub fn boolean(b: bool) -> Self {
+        RObject {
+            tt: RType::Bool,
+            value: RValue::Bool(b),
+        }
+    }
+
+    pub fn symbol(sym: RSym) -> Self {
+        RObject {
+            tt: RType::Symbol,
+            value: RValue::Symbol(sym),
+        }
+    }
+
     pub fn integer(n: i64) -> Self {
         RObject {
             tt: RType::Integer,
             value: RValue::Integer(n),
         }
+    }
+
+    pub fn float(f: f64) -> Self {
+        RObject {
+            tt: RType::Float,
+            value: RValue::Float(f),
+        }
+    }
+
+    pub fn string(s: String) -> Self {
+        RObject {
+            tt: RType::String,
+            value: RValue::String(s),
+        }
+    }
+
+    pub fn is_falsy(&self) -> bool {
+        match self.tt {
+            RType::Nil => true,
+            RType::Bool => match self.value {
+                RValue::Bool(b) => !b,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    pub fn is_truthy(&self) -> bool {
+        !self.is_falsy()
     }
 }
 

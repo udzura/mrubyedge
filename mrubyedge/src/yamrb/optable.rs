@@ -129,7 +129,7 @@ use super::{value::{RObject, RSym, RValue}, vm::{CALLINFO, VM}};
 
 pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
     use crate::rite::insn::OpCode::*;
-    // dbg!(&code, &operand);
+    dbg!(&code, &operand);
     match code {
         NOP => {
             op_nop(vm, &operand);
@@ -308,36 +308,36 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         ADD => {
             op_add(vm, &operand);
         }
-        // ADDI => {
-        //     // op_addi(vm, &operand);
-        // }
-        // SUB => {
-        //     // op_sub(vm, &operand);
-        // }
-        // SUBI => {
-        //     // op_subi(vm, &operand);
-        // }
-        // MUL => {
-        //     // op_mul(vm, &operand);
-        // }
-        // DIV => {
-        //     // op_div(vm, &operand);
-        // }
-        // EQ => {
-        //     // op_eq(vm, &operand);
-        // }
-        // LT => {
-        //     // op_lt(vm, &operand);
-        // }
-        // LE => {
-        //     // op_le(vm, &operand);
-        // }
-        // GT => {
-        //     // op_gt(vm, &operand);
-        // }
-        // GE => {
-        //     // op_ge(vm, &operand);
-        // }
+        ADDI => {
+            op_addi(vm, &operand);
+        }
+        SUB => {
+            op_sub(vm, &operand);
+        }
+        SUBI => {
+            op_subi(vm, &operand);
+        }
+        MUL => {
+            op_mul(vm, &operand);
+        }
+        DIV => {
+            op_div(vm, &operand);
+        }
+        EQ => {
+            op_eq(vm, &operand);
+        }
+        LT => {
+            op_lt(vm, &operand);
+        }
+        LE => {
+            op_le(vm, &operand);
+        }
+        GT => {
+            op_gt(vm, &operand);
+        }
+        GE => {
+            op_ge(vm, &operand);
+        }
         // ARRAY => {
         //     // op_array(vm, &operand);
         // }
@@ -443,7 +443,7 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         STOP => {
             op_stop(vm, &operand);
         }
-        _ => { unimplemented!("Not supported yet")}
+        _ => { unimplemented!("{:?}: Not supported yet", code)}
     }
 }
 
@@ -581,6 +581,164 @@ pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
         }
         _ => {
             unreachable!("add supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_addi(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let val1 = vm.current_regs()[a as usize].take().unwrap();
+    let val2 = b as i64;
+    let result = match &val1.value {
+        RValue::Integer(n1) => {
+            RObject::integer(*n1 + val2)
+        }
+        _ => {
+            unreachable!("addi supports only integer")
+        }
+    };
+    vm.current_regs()[a as usize].replace(Rc::new(result));
+}
+
+pub(crate) fn op_sub(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::integer(n1 - n2)
+        }
+        _ => {
+            unreachable!("sub supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_subi(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let val1 = vm.current_regs()[a as usize].take().unwrap();
+    let val2 = b as i64;
+    let result = match &val1.value {
+        RValue::Integer(n1) => {
+            RObject::integer(*n1 - val2)
+        }
+        _ => {
+            unreachable!("subi supports only integer")
+        }
+    };
+    vm.current_regs()[a as usize].replace(Rc::new(result));
+}
+
+pub(crate) fn op_mul(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::integer(n1 * n2)
+        }
+        _ => {
+            unreachable!("mul supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_div(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::integer(n1 / n2)
+        }
+        _ => {
+            unreachable!("div supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_lt(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::boolean(n1 < n2)
+        }
+        _ => {
+            unreachable!("lt supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_le(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::boolean(n1 <= n2)
+        }
+        _ => {
+            unreachable!("le supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_eq(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::boolean(n1 == n2)
+        }
+        _ => {
+            unreachable!("eq supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_gt(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::boolean(n1 > n2)
+        }
+        _ => {
+            unreachable!("gt supports only integer")
+        }
+    };
+    vm.current_regs()[a].replace(Rc::new(result));
+}
+
+pub(crate) fn op_ge(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let b = a + 1;
+    let val1 = vm.current_regs()[a].take().unwrap();
+    let val2 = vm.current_regs()[b].take().unwrap();
+    let result = match (&val1.value, &val2.value) {
+        (RValue::Integer(n1), RValue::Integer(n2)) => {
+            RObject::boolean(n1 >= n2)
+        }
+        _ => {
+            unreachable!("ge supports only integer")
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));

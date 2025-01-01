@@ -27,6 +27,8 @@ pub struct VM {
 
     // common class
     pub object_class: Rc<RClass>,
+
+    pub globals: HashMap<String, Rc<RObject>>,
 }
 
 impl VM {
@@ -39,6 +41,7 @@ impl VM {
                 procs: RefCell::new(HashMap::new()),
             }
         );
+        let globals = HashMap::new();
 
         let id = 1; // TODO generator
         let bytecode = Vec::new();
@@ -64,6 +67,7 @@ impl VM {
             error_code,
             flag_preemption,
             object_class,
+            globals,
         }
     }
 

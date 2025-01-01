@@ -173,54 +173,54 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         LOADI_7 => {
             op_loadi_n(vm, 7, &operand);
         }
-        // LOADSYM => {
-        //     // op_loadsym(vm, &operand);
-        // }
-        // LOADNIL => {
-        //     // op_loadnil(vm, &operand);
-        // }
-        // LOADSELF => {
-        //     // op_loadself(vm, &operand);
-        // }
-        // LOADT => {
-        //     // op_loadt(vm, &operand);
-        // }
-        // LOADF => {
-        //     // op_loadf(vm, &operand);
-        // }
-        // GETGV => {
-        //     // op_getgv(vm, &operand);
-        // }
-        // SETGV => {
-        //     // op_setgv(vm, &operand);
-        // }
+        LOADSYM => {
+            op_loadsym(vm, &operand);
+        }
+        LOADNIL => {
+            op_loadnil(vm, &operand);
+        }
+        LOADSELF => {
+            op_loadself(vm, &operand);
+        }
+        LOADT => {
+            op_loadt(vm, &operand);
+        }
+        LOADF => {
+            op_loadf(vm, &operand);
+        }
+        GETGV => {
+            op_getgv(vm, &operand);
+        }
+        SETGV => {
+            op_setgv(vm, &operand);
+        }
         // GETSV => {
         //     // op_getsv(vm, &operand);
         // }
         // SETSV => {
         //     // op_setsv(vm, &operand);
         // }
-        // GETIV => {
-        //     // op_getiv(vm, &operand);
-        // }
-        // SETIV => {
-        //     // op_setiv(vm, &operand);
-        // }
+        GETIV => {
+            // op_getiv(vm, &operand);
+        }
+        SETIV => {
+            // op_setiv(vm, &operand);
+        }
         // GETCV => {
         //     // op_getcv(vm, &operand);
         // }
         // SETCV => {
         //     // op_setcv(vm, &operand);
         // }
-        // GETCONST => {
-        //     // op_getconst(vm, &operand);
-        // }
-        // SETCONST => {
-        //     // op_setconst(vm, &operand);
-        // }
-        // GETMCNST => {
-        //     // op_getmcnst(vm, &operand);
-        // }
+        GETCONST => {
+            // op_getconst(vm, &operand);
+        }
+        SETCONST => {
+            // op_setconst(vm, &operand);
+        }
+        GETMCNST => {
+            // op_getmcnst(vm, &operand);
+        }
         // SETMCNST => {
         //     // op_setmcnst(vm, &operand);
         // }
@@ -500,6 +500,50 @@ pub(crate) fn op_loadineg(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let val = RObject::integer(-(b as i64));
     vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_loadsym(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let val = vm.current_irep.syms[b as usize].clone();
+    vm.current_regs()[a as usize].replace(Rc::new(RObject::symbol(val)));
+}
+
+pub(crate) fn op_loadnil(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let val = RObject::nil();
+    vm.current_regs()[a].replace(Rc::new(val));
+}
+
+pub(crate) fn op_loadself(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let val = vm.current_regs()[0].as_ref().cloned().unwrap();
+    vm.current_regs()[a].replace(val);
+}
+
+pub(crate) fn op_loadt(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let val = RObject::boolean(true);
+    vm.current_regs()[a].replace(Rc::new(val));
+}
+
+pub(crate) fn op_loadf(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let val = RObject::boolean(false);
+    vm.current_regs()[a].replace(Rc::new(val));
+}
+
+pub(crate) fn op_getgv(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let val = vm.current_irep.syms[b as usize].clone();
+    let val = vm.globals.get(&val.name).unwrap().clone();
+    vm.current_regs()[a as usize].replace(val);
+}
+
+pub(crate) fn op_setgv(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    let sym = vm.current_irep.syms[b as usize].clone();
+    vm.globals.insert(sym.name.clone(), val);
 }
 
 pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched) {

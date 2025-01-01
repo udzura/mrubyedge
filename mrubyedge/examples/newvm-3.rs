@@ -97,7 +97,7 @@ fn main() {
             op::Op { code: OpCode::TCLASS, operand: Fetched::B(1), pos: 0, len: 2 },
             op::Op { code: OpCode::METHOD, operand: Fetched::BB(2, 0), pos: 2, len: 3 },
             op::Op { code: OpCode::DEF, operand: Fetched::BB(1, 0), pos: 5, len: 3 },
-            op::Op { code: OpCode::LOADI, operand: Fetched::BB(2, 10), pos: 8, len: 3 },
+            op::Op { code: OpCode::LOADI, operand: Fetched::BB(2, 25), pos: 8, len: 3 },
             op::Op { code: OpCode::SSEND, operand: Fetched::BBB(1, 0, 1), pos: 11, len: 4 },
             op::Op { code: OpCode::RETURN, operand: Fetched::B(1), pos: 15, len: 2 },
             op::Op { code: OpCode::STOP, operand: Fetched::Z, pos: 17, len: 1 },

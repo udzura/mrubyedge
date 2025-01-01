@@ -274,12 +274,12 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         // SENDB => {
         //     // op_sendb(vm, &operand);
         // }
-        // CALL => {
-        //     // op_call(vm, &operand);
-        // }
-        // SUPER => {
-        //     // op_super(vm, &operand);
-        // }
+        CALL => {
+            op_call(vm, &operand);
+        }
+        SUPER => {
+            op_super(vm, &operand);
+        }
         // ARGARY => {
         //     // op_argary(vm, &operand);
         // }
@@ -721,6 +721,58 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, a: u8, b: u8, c: u8) {
 
     vm.current_regs()[a as usize].replace(recv.clone());
     push_callinfo(vm, method_id, c as usize);
+
+    vm.pc.set(0);
+    vm.current_irep = method.irep.as_ref().unwrap().clone();
+    vm.current_regs_offset += a as usize;
+}
+
+pub(crate) fn op_call(vm: &mut VM, _operand: &Fetched) {
+    push_callinfo(vm, "<tailcall>".into(), 0);
+
+    vm.pc.set(0);
+    let proc = vm.current_regs()[0].as_ref().cloned().unwrap();
+    match &proc.value {
+        RValue::Proc(proc) => {
+            vm.current_irep = proc.irep.clone().unwrap();
+        },
+        _ => unreachable!("call must be called on proc")
+    }
+}
+
+pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    // mrbc_sym sym_id = vm->callinfo_tail->mid;
+    let sym_id = vm.current_callinfo.as_ref().unwrap().method_id.name.clone();
+    let recv = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let args = (0..b).
+        map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap()).collect::<Vec<_>>();
+
+    let klass = match &recv.value {
+        RValue::Instance(ins) => ins.class.as_ref(),
+        _ => unreachable!("super must be called on instance")
+    };
+    let superclass = klass.super_class.as_ref().expect("superclass not found");
+    let sc_procs = superclass.procs.borrow();
+    let method = sc_procs.get(&sym_id).unwrap();
+
+    if !method.is_rb_func {
+        let func = method.func.clone().unwrap();
+        let res = unsafe {
+            let fptr = func.cast::<fn(&mut VM, &[Rc<RObject>]) -> u32>();
+            (*fptr)(vm, &args)
+        };
+        if res != 0 {
+            vm.error_code = res;
+        }
+        for i in (a as usize + 1)..(a as usize + b as usize + 1) {
+            vm.current_regs()[i].take();
+        }
+        return
+    }
+    
+    vm.current_regs()[a as usize].replace(recv.clone());
+    push_callinfo(vm, method.sym_id.clone().unwrap(), b as usize);
 
     vm.pc.set(0);
     vm.current_irep = method.irep.as_ref().unwrap().clone();

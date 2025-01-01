@@ -265,10 +265,10 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         }
         // SSENDB => {
         //     // op_ssendb(vm, &operand);
-        // }   
-        // SEND => {
-        //     // op_send(vm, &operand);
         // }
+        SEND => {
+            op_send(vm, &operand);
+        }
         // SENDB => {
         //     // op_sendb(vm, &operand);
         // }
@@ -654,9 +654,18 @@ pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_ssend(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
+    do_op_send(vm, 0, a, b, c);
+}
+
+pub(crate) fn op_send(vm: &mut VM, operand: &Fetched) {
+    let (a, b, c) = operand.as_bbb().unwrap();
+    do_op_send(vm, a as usize, a, b, c);
+}
+
+pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, a: u8, b: u8, c: u8) {
     let block_index = (a + c + 1) as usize;
 
-    let recv = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let recv = vm.current_regs()[recv_index].as_ref().cloned().unwrap();
     let args = (0..c).
         map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap()).collect::<Vec<_>>();
 

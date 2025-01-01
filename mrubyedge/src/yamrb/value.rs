@@ -31,7 +31,7 @@ pub enum RValue {
     Array(Vec<Rc<RObject>>),
     Hash(HashMap<String, Rc<RObject>>),
     String(RefCell<String>),
-    Range(Rc<RObject>, Rc<RObject>),
+    Range(Rc<RObject>, Rc<RObject>, bool),
     Data,
     Nil,
 }
@@ -127,6 +127,17 @@ impl RObject {
             _ => false,
         }
     }
+
+    // TODO: implment Object#hash
+    pub fn as_hash_key(&self) -> String {
+        match &self.value {
+            RValue::String(s) => format!("__String__{}", s.borrow().clone()),
+            RValue::Integer(i) => format!("__Integer__{}", *i),
+            RValue::Symbol(s) => format!("__Symbol__{}", s.name),
+            RValue::Bool(b) => format!("__Bool__{:?}", *b),
+            _ => unimplemented!("Key should be one of String, Integer, Symbol, or Boolean for now"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -154,6 +165,15 @@ impl RClass {
     }
 }
 
+impl From<Rc<RClass>> for RObject {
+    fn from(value: Rc<RClass>) -> Self {
+        RObject {
+            tt: RType::Class,
+            value: RValue::Class(value),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RInstance {
     pub class: Rc<RClass>,
@@ -165,7 +185,7 @@ pub struct RInstance {
 #[derive(Debug, Clone)]
 pub struct RProc {
     pub is_rb_func: bool,
-    pub sym_id: RefCell<RSym>,
+    pub sym_id: Option<RSym>,
     pub next: Option<Box<RProc>>,
     pub irep: Option<Rc<IREP>>,
     pub func: Option<Box<*const c_void>>, // TODO: can we cast this into fn pointer?

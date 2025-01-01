@@ -1,8 +1,12 @@
-use std::{cell::RefCell, rc::Rc};
+#[allow(unused_imports)]
+use std::cell::RefCell;
+
+use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::rite::insn::{Fetched, OpCode};
 
-use super::{value::{RObject, RSym, RValue}, vm::{CALLINFO, IREP, VM}};
+use super::{value::*, vm::*};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
 // OPCODE(NOP,        Z)        /* no operation */
@@ -372,36 +376,36 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         STRCAT => {
             op_strcat(vm, &operand);
         }
-        // HASH => {
-        //     // op_hash(vm, &operand);
-        // }
+        HASH => {
+            op_hash(vm, &operand);
+        }
         // HASHADD => {
         //     // op_hashadd(vm, &operand);
         // }
         // HASHCAT => {
         //     // op_hashcat(vm, &operand);
         // }
-        // LAMBDA => {
-        //     // op_lambda(vm, &operand);
-        // }
+        LAMBDA => {
+            op_lambda(vm, &operand);
+        }
         // BLOCK => {
         //     // op_block(vm, &operand);
         // }
         METHOD => {
             op_method(vm, &operand);
         }
-        // RANGE_INC => {
-        //     // op_range_inc(vm, &operand);
-        // }
-        // RANGE_EXC => {
-        //     // op_range_exc(vm, &operand);
-        // }
-        // OCLASS => {
-        //     // op_oclass(vm, &operand);
-        // }
-        // CLASS => {
-        //     // op_class(vm, &operand);
-        // }
+        RANGE_INC => {
+            op_range_inc(vm, &operand);
+        }
+        RANGE_EXC => {
+            op_range_exc(vm, &operand);
+        }
+        OCLASS => {
+            op_oclass(vm, &operand);
+        }
+        CLASS => {
+            op_class(vm, &operand);
+        }
         // MODULE => {
         //     // op_module(vm, &operand);
         // }
@@ -968,6 +972,36 @@ pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
     };
 }
 
+pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let a = a as usize;
+    let b = b as usize;
+    let mut hash = HashMap::new();
+    for i in 0..(b*2) {
+        let key = vm.current_regs()[a + i * 2].clone().unwrap();
+        let val = vm.current_regs()[a + i * 2 + 1].clone().unwrap();
+        hash.insert(key.as_hash_key(), val);
+    }
+    let val = RObject::hash(hash);
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let irep = Some(Rc::new(vm.current_irep.reps[b as usize].clone()));
+    let val = RObject {
+        tt: RType::Proc,
+        value: RValue::Proc(RProc {
+            irep,
+            is_rb_func: true,
+            sym_id: Some("<lambda>".into()),
+            next: None,
+            func: None,
+        }),
+    };
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
 pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(Rc::new(vm.current_irep.reps[b as usize].clone()));
@@ -976,12 +1010,58 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
         value: super::value::RValue::Proc(super::value::RProc {
             irep,
             is_rb_func: true,
-            sym_id: RefCell::new(RSym::new("".to_string())),
+            sym_id: None,
             next: None,
             func: None,
         }),
     };
     vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_range_inc(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap();
+    do_op_range(vm, a as usize, a as usize + 1, false);
+}
+
+pub(crate) fn op_range_exc(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap();
+    do_op_range(vm, a as usize, a as usize + 1, true);
+}
+
+fn do_op_range(vm: &mut VM, a: usize, b: usize, exclusive: bool) {
+    let val1 = vm.current_regs()[a].clone().unwrap();
+    let val2 = vm.current_regs()[b].clone().unwrap();
+    let val = RObject {
+        tt: super::value::RType::Range,
+        value: super::value::RValue::Range(val1, val2, exclusive),
+    };
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_oclass(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let val = vm.object_class.clone().into();
+    vm.current_regs()[a].replace(Rc::new(val));
+}
+
+pub(crate) fn op_class(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let superclass = vm.current_regs()[a as usize + 1].as_ref().cloned();
+    let name = vm.current_irep.syms[b as usize].clone();
+    let superclass = match superclass {
+        Some(superclass) => {
+            if let RValue::Class(klass) = &superclass.value {
+                klass.clone()
+            } else {
+                vm.object_class.clone()
+            }
+        }
+        None => {
+            vm.object_class.clone()
+        }
+    };
+    let klass = Rc::new(RClass::new(&name.name, Some(superclass)));
+    vm.current_regs()[a as usize].replace(Rc::new(klass.into()));
 }
 
 pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
@@ -994,7 +1074,9 @@ pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
     let method = method.as_ref();
     if let (RValue::Class(klass), RValue::Proc(method)) = (&klass.value, &method.value) {
         let mut procs = klass.procs.borrow_mut();
-        procs.insert(sym.name.clone(), method.clone());
+        let mut method = method.clone();
+        method.sym_id = Some(sym.clone());
+        procs.insert(sym.name.clone(), method);
     } else {
         unreachable!("DEF must be called on class");
     }

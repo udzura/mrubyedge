@@ -9,7 +9,7 @@ pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: String, arg
         Some(obj) => obj,
         None => vm.current_regs()[0].as_ref().unwrap().clone(),
     };
-    let binding = top_self.get_class();
+    let binding = top_self.get_class(vm);
     let binding = binding.procs.borrow();
     let method = binding.get(&name).unwrap();
     if method.is_rb_func {

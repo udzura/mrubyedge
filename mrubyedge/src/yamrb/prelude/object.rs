@@ -14,8 +14,15 @@ pub(crate) fn initialize_object(vm: &mut VM) {
     {
         let mrb_kernel_puts = 
             Box::new(mrb_kernel_puts);
-        mrb_define_cmethod(vm, object_class, "puts", mrb_kernel_puts);
+        mrb_define_cmethod(vm, object_class.clone(), "puts", mrb_kernel_puts);
+        let mrb_kernel_debug = 
+            Box::new(mrb_kernel_debug);
+        mrb_define_cmethod(vm, object_class.clone(), "debug", mrb_kernel_debug);
     }
+
+    let mrb_object_initialize = 
+    Box::new(mrb_object_initialize);
+    mrb_define_cmethod(vm, object_class.clone(), "initialize", mrb_object_initialize);
 }
 
 #[cfg(feature = "wasi")]
@@ -33,5 +40,18 @@ pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>
             return Err(Error::RuntimeError("puts only accept string".to_string()));
         }
     }
+    Ok(Rc::new(RObject::nil()))
+}
+
+#[cfg(feature = "wasi")]
+pub fn mrb_kernel_debug(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    for (i, obj) in args.iter().enumerate() {
+        dbg!(i, obj.clone());
+    }
+    Ok(Rc::new(RObject::nil()))
+}
+
+pub fn mrb_object_initialize(_vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    // Abstract method; do nothing
     Ok(Rc::new(RObject::nil()))
 }

@@ -141,21 +141,27 @@ impl RObject {
         }
     }
 
-    pub fn get_class(&self) -> Rc<RClass> {
+    pub fn get_class(&self, vm: &VM) -> Rc<RClass> {
         match &self.value {
-            RValue::Class(_) => todo!("return Class class"),
+            RValue::Class(_) => vm.get_class_by_name("Class"),
             RValue::Instance(i) => i.class.clone(),
-            RValue::Bool(_b) => todo!("return True or False class"),
-            RValue::Symbol(_) => todo!("return Symbol class"),
-            RValue::Integer(_) => todo!("return Integer class"),
-            RValue::Float(_) => todo!("return Float class"),
-            RValue::Proc(_) => todo!("return Proc class"),
-            RValue::Array(_) => todo!("return Array class"),
-            RValue::Hash(_) => todo!("return Hash class"),
-            RValue::String(_) => todo!("return String class"),
-            RValue::Range(_, _, _) => todo!("return Range class"),
+            RValue::Bool(b) => {
+                if *b {
+                    vm.get_class_by_name("TrueClass")
+                } else {
+                    vm.get_class_by_name("FalseClass")
+                }
+            },
+            RValue::Symbol(_) => vm.get_class_by_name("Symbol"),
+            RValue::Integer(_) => vm.get_class_by_name("Integer"),
+            RValue::Float(_) => vm.get_class_by_name("Float"),
+            RValue::Proc(_) => vm.get_class_by_name("Proc"),
+            RValue::Array(_) => vm.get_class_by_name("Array"),
+            RValue::Hash(_) => vm.get_class_by_name("Hash"),
+            RValue::String(_) => vm.get_class_by_name("String"),
+            RValue::Range(_, _, _) => vm.get_class_by_name("Range"),
             RValue::Data => todo!("return ...? class"),
-            RValue::Nil => todo!("return NilClass"),
+            RValue::Nil => vm.get_class_by_name("NilClass"),
         }
     }
 }

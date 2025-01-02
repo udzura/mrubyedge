@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use crate::rite::{insn, Irep, Rite};
 
 use super::optable::*;
+use super::prelude::class::initialize_class;
 use super::prelude::object::initialize_object;
 use super::value::*;
 use super::op::Op;
@@ -134,6 +135,7 @@ impl VM {
         };
 
         initialize_object(&mut vm);
+        initialize_class(&mut vm);
         
         vm
     }
@@ -196,6 +198,10 @@ impl VM {
     
     pub(crate) fn get_fn(&self, i: usize) -> Option<Rc<RFn>> {
         self.fn_table.get(i).cloned()
+    }
+
+    pub fn get_class_by_name(&self, name: &str) -> Rc<RClass> {
+        self.builtin_class_table.get(name).cloned().unwrap()
     }
 }
 

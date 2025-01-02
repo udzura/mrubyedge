@@ -388,9 +388,10 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         LAMBDA => {
             op_lambda(vm, &operand);
         }
-        // BLOCK => {
-        //     // op_block(vm, &operand);
-        // }
+        BLOCK => {
+            // op_block(vm, &operand);
+            op_lambda(vm, &operand);
+        }
         METHOD => {
             op_method(vm, &operand);
         }
@@ -713,20 +714,20 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
     }
 
     let method_id = vm.current_irep.syms[b as usize].clone();
-    let klass = match &recv.value {
-        RValue::Instance(ins) => ins.class.as_ref(),
-        _ => unreachable!("send must be called on class")
-    };
+    let klass = recv.get_class(vm);
     let binding = klass.procs.borrow();
     let method = binding.get(&method_id.name).expect("method not found");
     if !method.is_rb_func {
         let func = vm.get_fn(method.func.unwrap()).unwrap();
+        vm.current_regs_offset += a as usize;
         let res = func(vm, &args);
+        vm.current_regs_offset -= a as usize;
         for i in (a as usize + 1)..block_index {
             vm.current_regs()[i].take();
         }
  
         if res.is_err() {
+            dbg!(&res);
             vm.error_code = 255;
             vm.current_regs()[a as usize].replace(Rc::new(RObject::nil()));
         } else {
@@ -1168,7 +1169,7 @@ pub(crate) fn op_exec(vm: &mut VM, operand: &Fetched) {
     let irep = vm.irep.reps[b as usize].clone();
     vm.current_irep = irep;
     vm.current_regs_offset += a as usize;
-    vm.target_class = recv.get_class();
+    vm.target_class = recv.get_class(vm);
 }
 
 pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {

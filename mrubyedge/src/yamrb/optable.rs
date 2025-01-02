@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::rite::insn::{Fetched, OpCode};
+use crate::{rite::insn::{Fetched, OpCode}, Error};
 
 use super::{value::*, vm::*};
 
@@ -720,13 +720,10 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
     let binding = klass.procs.borrow();
     let method = binding.get(&method_id.name).expect("method not found");
     if !method.is_rb_func {
-        let func = method.func.clone().unwrap();
-        let res = unsafe {
-            let fptr = func.cast::<fn(&mut VM, &[Rc<RObject>]) -> u32>();
-            (*fptr)(vm, &args)
-        };
-        if res != 0 {
-            vm.error_code = res;
+        let func = vm.get_fn(method.func.unwrap()).unwrap();
+        let res = func(vm, &args);
+        if res.is_err() {
+            vm.error_code = 255;
         }
         for i in (a as usize + 1)..block_index {
             vm.current_regs()[i].take();
@@ -770,15 +767,11 @@ pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) {
     let superclass = klass.super_class.as_ref().expect("superclass not found");
     let sc_procs = superclass.procs.borrow();
     let method = sc_procs.get(&sym_id).unwrap();
-
     if !method.is_rb_func {
-        let func = method.func.clone().unwrap();
-        let res = unsafe {
-            let fptr = func.cast::<fn(&mut VM, &[Rc<RObject>]) -> u32>();
-            (*fptr)(vm, &args)
-        };
-        if res != 0 {
-            vm.error_code = res;
+        let func = vm.get_fn(method.func.unwrap()).unwrap();
+        let res = func(vm, &args);
+        if res.is_err() {
+            vm.error_code = 255;
         }
         for i in (a as usize + 1)..(a as usize + b as usize + 1) {
             vm.current_regs()[i].take();
@@ -1055,6 +1048,11 @@ pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
         (RValue::String(s1), RValue::String(s2)) => {
             let mut s1 = s1.borrow_mut();
             let s2 = s2.borrow();
+            s1.push_str(&s2);
+        }
+        (RValue::String(s1), RValue::Integer(s2)) => {
+            let mut s1 = s1.borrow_mut();
+            let s2 = s2.to_string();
             s1.push_str(&s2);
         }
         _ => {

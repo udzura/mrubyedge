@@ -6,12 +6,12 @@ use std::collections::HashMap;
 use crate::rite::{insn, Irep, Rite};
 
 use super::optable::*;
+use super::prelude::object::initialize_object;
 use super::value::*;
 use super::op::Op;
 
 const MAX_REGS_SIZE: usize = 256;
 
-#[derive(Debug, Clone)]
 pub struct VM {
     pub irep: Rc<IREP>,
     
@@ -33,6 +33,8 @@ pub struct VM {
 
     pub globals: HashMap<String, Rc<RObject>>,
     pub consts: HashMap<String, Rc<RObject>>,
+
+    pub fn_table: Vec<Rc<RFn>>,
 }
 
 fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
@@ -91,8 +93,8 @@ impl VM {
     pub fn new_by_raw_irep(irep: IREP) -> VM {
         let irep = Rc::new(irep);
         let globals = HashMap::new();
-        let mut consts = HashMap::new();
-        let mut builtin_class_table = HashMap::new();
+        let consts = HashMap::new();
+        let builtin_class_table = HashMap::new();
 
         let object_class = Rc::new(
             RClass {
@@ -102,11 +104,6 @@ impl VM {
                 consts: RefCell::new(HashMap::new()),
             }
         );
-        consts.insert("Object".to_string(), Rc::new(RObject {
-            tt: RType::Class,
-            value: RValue::Class(object_class.clone()),
-        }));
-        builtin_class_table.insert("Object", object_class.clone());
 
         let id = 1; // TODO generator
         let bytecode = Vec::new();
@@ -118,8 +115,9 @@ impl VM {
         let target_class = object_class.clone();
         let error_code = 0;
         let flag_preemption = Cell::new(false);
+        let fn_table = Vec::new();
 
-        VM {
+        let mut vm = VM {
             id,
             bytecode,
             irep,
@@ -135,7 +133,12 @@ impl VM {
             builtin_class_table,
             globals,
             consts,
-        }
+            fn_table
+        };
+
+        initialize_object(&mut vm);
+        
+        vm
     }
 
     pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
@@ -173,6 +176,15 @@ impl VM {
 
     pub(crate) fn current_regs(&mut self) -> &mut [Option<Rc<RObject>>] {
         &mut self.regs[self.current_regs_offset..]
+    }
+
+    pub(crate) fn register_fn(&mut self, f: RFn) -> usize {
+        self.fn_table.push(Rc::new(f));
+        return self.fn_table.len() - 1;
+    }
+    
+    pub(crate) fn get_fn(&self, i: usize) -> Option<Rc<RFn>> {
+        self.fn_table.get(i).cloned()
     }
 }
 

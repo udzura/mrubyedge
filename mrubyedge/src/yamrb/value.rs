@@ -1,6 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, ffi::c_void, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ffi::c_void, fmt::Debug, rc::Rc};
 
-use super::vm::IREP;
+use crate::Error;
+
+use super::vm::{IREP, VM};
 
 #[derive(Debug, Clone, Copy)]
 pub enum RType {
@@ -206,8 +208,9 @@ pub struct RProc {
     pub sym_id: Option<RSym>,
     pub next: Option<Box<RProc>>,
     pub irep: Option<Rc<IREP>>,
-    pub func: Option<Box<*const c_void>>, // TODO: can we cast this into fn pointer?
-}
+    pub func: Option<usize>,}
+
+pub type RFn = Box<dyn Fn(&mut VM, &[Rc<RObject>]) -> Result<usize, Error>>;
 
 #[derive(Debug, Clone)]
 pub struct RSym {

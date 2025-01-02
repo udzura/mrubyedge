@@ -5,10 +5,11 @@ pub mod yamrb;
 use std::error;
 use std::fmt;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
     General,
     InvalidOpCode,
+    RuntimeError(String),
 }
 
 impl fmt::Display for Error {

@@ -54,9 +54,6 @@ fn irep_to_irep1(irep: &mut Irep) -> IREP {
     let mut irep1 = IREP {
         nlocals: irep.nlocals(),  
         nregs: irep.nregs(),
-        rlen: irep.rlen(),
-        iren: 0,
-        plen: irep.plen,
         code: Vec::new(),
         syms: Vec::new(),
         pool: Vec::new(),
@@ -144,7 +141,7 @@ impl VM {
     pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
         let class = self.object_class.clone();
         // Insert top_self
-        self.current_regs()[0].replace(Rc::new(RObject{
+        let top_self = Rc::new(RObject{
             tt: RType::Instance,
             value: RValue::Instance(RInstance {
                 class,
@@ -152,14 +149,21 @@ impl VM {
                 data: Vec::new(),
                 ref_count: 1,
             })
-        }));
+        });
+        if self.current_regs()[0].is_none() {
+            self.current_regs()[0].replace(top_self.clone());
+        }
         loop {
             let pc = self.pc.get();
-            let op = self.current_irep.as_ref().code.get(pc).unwrap();
+            if self.current_irep.code.len() <= pc {
+                // reached end of the IREP
+                break;
+            }
+            let op = self.current_irep.code.get(pc).unwrap();
             let operand = op.operand;
             self.pc.set(pc + 1);
 
-            consume_expr(self, op.code, &operand);
+            consume_expr(self, op.code, &operand, op.pos, op.len);
 
             if self.flag_preemption.get() {
                 break;
@@ -168,10 +172,13 @@ impl VM {
 
         self.flag_preemption.set(false);
 
-        match self.regs[0].take() {
+        let retval = match self.regs[0].take() {
             Some(v) => Ok(v),
             None => Ok(Rc::new(RObject::nil()))
-        }
+        };
+        self.current_regs()[0].replace(top_self.clone());
+
+        retval
     }
 
     pub(crate) fn current_regs(&mut self) -> &mut [Option<Rc<RObject>>] {
@@ -192,9 +199,6 @@ impl VM {
 pub struct IREP {
     pub nlocals: usize,
     pub nregs: usize, // NOTE: is u8 better?
-    pub rlen: usize,
-    pub iren: usize,
-    pub plen: usize,
     pub code: Vec<Op>,
     pub syms: Vec<RSym>,
     pub pool: Vec<RPool>,

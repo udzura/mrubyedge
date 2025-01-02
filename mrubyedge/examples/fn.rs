@@ -1,3 +1,5 @@
+use mrubyedge::yamrb::helpers::mrb_funcall;
+
 extern crate mrubyedge;
 
 fn main() {
@@ -6,17 +8,21 @@ fn main() {
     // dbg!(&rite);
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
 
-    eprintln!("return value:");
+    eprintln!("evaluate value:");
     eprintln!("{:?}", vm.run().unwrap());
 
-    // match mrb_helper::mrb_funcall(&mut vm, &top_self, "hello".to_string(), &args) {
-    //     Ok(retval) => {
-    //         dbg!(retval);
-    //     }
-    //     Err(ex) => {
-    //         dbg!(ex);
-    //     }
-    // };
+    let args = vec![
+    ];
+
+    match mrb_funcall(&mut vm, None, "hello".to_string(), &args) {
+        Ok(retval) => {
+            dbg!(retval);
+        }
+        Err(ex) => {
+            eprintln!("Error");
+            dbg!(ex);
+        }
+    };
 
     ()
 }

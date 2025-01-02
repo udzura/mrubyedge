@@ -22,7 +22,7 @@ pub(crate) fn initialize_object(vm: &mut VM) {
     });
 }
 
-pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<usize, Error> {
+pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let msg = args[0].clone();
     match &msg.value {
         RValue::String(s) => {
@@ -36,5 +36,5 @@ pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<usize, Erro
             return Err(Error::RuntimeError("puts only accept string".to_string()));
         }
     }
-    Ok(0)
+    Ok(Rc::new(RObject::nil()))
 }

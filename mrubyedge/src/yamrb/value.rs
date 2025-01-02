@@ -210,7 +210,7 @@ pub struct RProc {
     pub irep: Option<Rc<IREP>>,
     pub func: Option<usize>,}
 
-pub type RFn = Box<dyn Fn(&mut VM, &[Rc<RObject>]) -> Result<usize, Error>>;
+pub type RFn = Box<dyn Fn(&mut VM, &[Rc<RObject>]) -> Result<Rc<RObject>, Error>>;
 
 #[derive(Debug, Clone)]
 pub struct RSym {

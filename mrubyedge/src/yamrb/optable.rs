@@ -129,7 +129,7 @@ use super::{value::*, vm::*};
 // }
 //
 
-pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
+pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: usize, len: usize) {
     use crate::rite::insn::OpCode::*;
     // dbg!(&code, &operand);
     match code {
@@ -239,16 +239,16 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
         //     // op_setidx(vm, &operand);
         // }
         JMP => {
-            op_jmp(vm, &operand);
+            op_jmp(vm, &operand, pos + len);
         }
         JMPIF => {
-            op_jmpif(vm, &operand);
+            op_jmpif(vm, &operand, pos + len);
         }
         JMPNOT => {
-            op_jmpnot(vm, &operand);
+            op_jmpnot(vm, &operand, pos + len);
         }
         JMPNIL => {
-            op_jmpnil(vm, &operand);
+            op_jmpnil(vm, &operand, pos + len);
         }
         // JMPUW => {
         //     // op_jmpuw(vm, &operand);
@@ -449,7 +449,7 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched) {
     }
 }
 
-fn push_callinfo(vm: &mut VM, method_id: RSym, n_args: usize) {
+pub(crate) fn push_callinfo(vm: &mut VM, method_id: RSym, n_args: usize) {
     let callinfo = CALLINFO {
         prev: vm.current_callinfo.clone(),
         method_id,
@@ -641,35 +641,35 @@ pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
     up_regs[b as usize].replace(val);
 }
 
-pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched, end_pos: usize) {
     let a = operand.as_s().unwrap();
-    let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), a as usize);
+    let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + a as usize);
     vm.pc.set(next_pc);
 }
 
-pub(crate) fn op_jmpif(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_jmpif(vm: &mut VM, operand: &Fetched, end_pos: usize) {
     let (a, b) = operand.as_bs().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     if val.is_truthy() {
-        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), b as usize);
+        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + b as usize);
         vm.pc.set(next_pc);
     }
 }
 
-pub(crate) fn op_jmpnot(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_jmpnot(vm: &mut VM, operand: &Fetched, end_pos: usize) {
     let (a, b) = operand.as_bs().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     if val.is_falsy() {
-        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), b as usize);
+        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + b as usize);
         vm.pc.set(next_pc);
     }
 }
 
-pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched, end_pos: usize) {
     let (a, b) = operand.as_bs().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     if val.is_nil() {
-        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), b as usize);
+        let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + b as usize);
         vm.pc.set(next_pc);
     }
 }
@@ -722,11 +722,15 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
     if !method.is_rb_func {
         let func = vm.get_fn(method.func.unwrap()).unwrap();
         let res = func(vm, &args);
-        if res.is_err() {
-            vm.error_code = 255;
-        }
         for i in (a as usize + 1)..block_index {
             vm.current_regs()[i].take();
+        }
+ 
+        if res.is_err() {
+            vm.error_code = 255;
+            vm.current_regs()[a as usize].replace(Rc::new(RObject::nil()));
+        } else {
+            vm.current_regs()[a as usize].replace(res.unwrap());
         }
         return
     }

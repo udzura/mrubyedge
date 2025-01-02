@@ -42,25 +42,22 @@ fn main() {
     let irep1 = vm::IREP {
         nlocals: 3,
         nregs: 8,
-        rlen: 0,
-        iren: 24,
-        plen: 0,
         code: vec![
             op::Op { code: OpCode::ENTER, operand: Fetched::W(0x40000), pos: 0, len: 4 },
             op::Op { code: OpCode::MOVE, operand: Fetched::BB(3, 1), pos: 4, len: 3 },
             op::Op { code: OpCode::LOADI_1, operand: Fetched::B(4), pos: 7, len: 2 },
             op::Op { code: OpCode::LT, operand: Fetched::B(3), pos: 9, len: 2 },
-            op::Op { code: OpCode::JMPNOT, operand: Fetched::BS(3, 22), pos: 11, len: 4 },
+            op::Op { code: OpCode::JMPNOT, operand: Fetched::BS(3, 22-11-4), pos: 11, len: 4 },
             op::Op { code: OpCode::LOADI_0, operand: Fetched::B(3), pos: 15, len: 2 },
             op::Op { code: OpCode::RETURN, operand: Fetched::B(3), pos: 17, len: 2 },
-            op::Op { code: OpCode::JMP, operand: Fetched::S(64), pos: 19, len: 3 },
+            op::Op { code: OpCode::JMP, operand: Fetched::S(64-19-3), pos: 19, len: 3 },
             op::Op { code: OpCode::MOVE, operand: Fetched::BB(3, 1), pos: 22, len: 3 },
             op::Op { code: OpCode::LOADI_3, operand: Fetched::B(4), pos: 25, len: 2 },
             op::Op { code: OpCode::LT, operand: Fetched::B(3), pos: 27, len: 2 },
-            op::Op { code: OpCode::JMPNOT, operand: Fetched::BS(3, 40), pos: 29, len: 4 },
+            op::Op { code: OpCode::JMPNOT, operand: Fetched::BS(3, 40-29-4), pos: 29, len: 4 },
             op::Op { code: OpCode::LOADI_1, operand: Fetched::B(3), pos: 33, len: 2 },
             op::Op { code: OpCode::RETURN, operand: Fetched::B(3), pos: 35, len: 2 },
-            op::Op { code: OpCode::JMP, operand: Fetched::S(64), pos: 37, len: 3},
+            op::Op { code: OpCode::JMP, operand: Fetched::S(64-37-3), pos: 37, len: 3},
             op::Op { code: OpCode::MOVE, operand: Fetched::BB(4, 1), pos: 40, len: 3 },
             op::Op { code: OpCode::SUBI, operand: Fetched::BB(4, 1), pos: 43, len: 3 },
             op::Op { code: OpCode::SSEND, operand: Fetched::BBB(3, 0, 1), pos: 46, len: 4 },
@@ -90,9 +87,6 @@ fn main() {
     let irep0 = vm::IREP {
         nlocals: 1,
         nregs: 3,
-        rlen: 0,
-        iren: 5,
-        plen: 0,
         code: vec![
             op::Op { code: OpCode::TCLASS, operand: Fetched::B(1), pos: 0, len: 2 },
             op::Op { code: OpCode::METHOD, operand: Fetched::BB(2, 0), pos: 2, len: 3 },
@@ -107,7 +101,6 @@ fn main() {
         reps: vec![Rc::new(irep1)],
     };
     let mut vm = vm::VM::new_by_raw_irep(irep0);
-    vm.regs[0].replace(Rc::new(value::RObject::nil()));
     let ret = vm.run().unwrap();
     dbg!(ret);
 }

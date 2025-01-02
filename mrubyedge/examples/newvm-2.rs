@@ -23,9 +23,6 @@ fn main() {
     let irep1 = vm::IREP {
         nlocals: 4,
         nregs: 7,
-        rlen: 0,
-        iren: 5,
-        plen: 0,
         code: vec![
             op::Op { code: OpCode::ENTER, operand: Fetched::W(0x80000), pos: 0, len: 4 },
             op::Op { code: OpCode::MOVE, operand: Fetched::BB(4, 1), pos: 4, len: 3 },
@@ -57,9 +54,6 @@ fn main() {
     let irep0 = vm::IREP {
         nlocals: 3,
         nregs: 7,
-        rlen: 0,
-        iren: 8,
-        plen: 0,
         code: vec![
             op::Op { code: OpCode::TCLASS, operand: Fetched::B(3), pos: 0, len: 2 },
             op::Op { code: OpCode::METHOD, operand: Fetched::BB(4, 0), pos: 2, len: 3 },
@@ -77,7 +71,6 @@ fn main() {
         reps: vec![Rc::new(irep1)],
     };
     let mut vm = vm::VM::new_by_raw_irep(irep0);
-    vm.regs[0].replace(Rc::new(value::RObject::nil()));
     let ret = vm.run().unwrap();
     dbg!(ret);
 }

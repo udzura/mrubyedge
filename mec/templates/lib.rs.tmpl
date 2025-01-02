@@ -2,15 +2,11 @@
 #![allow(non_snake_case)]
 extern crate mrubyedge;
 
-use mrubyedge::{
-    mrb_helper,
-    vm::VM,
-    vm::{RMethod, RObject},
-};
-
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::any::Any;
+
+use mrubyedge::yamrb::value::*;
 
 const DATA: &'static [u8] = include_bytes!("./{{ file_basename }}.mrb");
 const MEMORY_INDEX: u32 = 0;
@@ -46,16 +42,9 @@ fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, _self: &RObject, 
 {{ fn.exported_helper_var }}
 #[no_mangle]
 pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
-    let rite = mrubyedge::rite::load(DATA).unwrap();
-    let mut vm = mrubyedge::vm::VM::open(rite);
-    vm.prelude().unwrap();
-    vm.eval_insn().unwrap();
-
-    let objclass_sym = vm.target_class.unwrap() as usize;
-    let top_self = RObject::RInstance {
-        class_index: objclass_sym,
-	data: Rc::new(RefCell::new(Box::new(()) as Box<dyn Any>)),
-    };
+    let mut rite = mrubyedge::rite::load(DATA).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
 
 {% set index = 1 %}
 {% for ifn in ftypes_imports %}
@@ -71,7 +60,12 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     {{ fn.str_args_converter }}
 
     let args = {{ fn.args_let_vec }};
-    let retval = mrb_helper::mrb_funcall(&mut vm, &top_self, "{{ fn.func_name }}".to_string(), &args);
+    let retval: Result<Rc<RObject>, mrubyedge::Error> = 
+        mrubyedge::yamrb::helpers::mrb_funcall(
+            &mut vm,
+            None,
+            "{{ fn.func_name }}".to_string(),
+            &args);
 
     match &retval {
         Ok(retval) => {

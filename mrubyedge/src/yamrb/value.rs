@@ -160,6 +160,63 @@ impl RObject {
     }
 }
 
+impl TryFrom<&RObject> for i32 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as i32),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as i32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for f32 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as f32),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1.0)
+                } else {
+                    Ok(0.0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as f32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for String {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::String(s) => Ok(s.borrow().to_owned()),
+            v => Ok(format!("{:?}", v)),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for () {
+    type Error = Error;
+
+    fn try_from(_: &RObject) -> Result<Self, Self::Error> {
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RClass {
     pub sym_id: RSym,

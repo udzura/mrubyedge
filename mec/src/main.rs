@@ -1,11 +1,9 @@
-#![feature(path_file_prefix)]
-
 extern crate bpaf;
 extern crate rand;
 
 const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "0.3.0";
 
-use std::{fs::File, io::Read, path::PathBuf, process::Command};
+use std::{fs::File, io::Read, path::{Path, PathBuf}, process::Command, str};
 
 use askama::Template;
 use bpaf::{any, construct, long, Parser};
@@ -45,6 +43,14 @@ fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn file_prefix_of(file: &Path) -> Option<String> {
+    file.file_name()?
+        .to_str()?
+        .split('.')
+        .next()
+        .map(|s| s.to_string())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fnname = long("fnname").argument::<PathBuf>("FNNAME").optional();
     let skip_cleanup = long("skip-cleanup").switch();
@@ -72,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = opts.path;
 
     let mrubyfile = std::fs::canonicalize(path)?;
-    let fname = mrubyfile.as_path().file_prefix().unwrap().to_string_lossy();
+    let fname = file_prefix_of(mrubyfile.as_path()).unwrap();
 
     let pwd = std::env::current_dir()?;
     std::env::set_current_dir(std::env::var("TMPDIR").unwrap_or("/tmp".to_string()))?;
@@ -89,7 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if opts.debug_mruby_edge {
         let cargo_toml = CargoTomlDebug {
-            mruby_edge_crate_path: "/opt/ghq/github.com/udzura/mrubyedge/mrubyedge",
+            mruby_edge_crate_path: "/Users/udzura/ghq/github.com/udzura/mrubyedge/mrubyedge",
             mrubyedge_feature: feature,
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;

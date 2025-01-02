@@ -39,9 +39,9 @@ impl FuncDef {
             .iter()
             .enumerate()
             .map(|(idx, arg)| match arg.as_str() {
-                "Integer" => format!("std::rc::Rc::new(RObject::RInteger(a{} as i64))", idx),
-                "Float" => format!("std::rc::Rc::new(RObject::RFloat(a{} as f64))", idx),
-                "String" => format!("std::rc::Rc::new(RObject::RString(a{}.to_owned()))", idx),
+                "Integer" => format!("std::rc::Rc::new(RObject::integer(a{} as i64))", idx),
+                "Float" => format!("std::rc::Rc::new(RObject::float(a{} as f64))", idx),
+                "String" => format!("std::rc::Rc::new(RObject::string(a{}.to_string()))", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
                 }

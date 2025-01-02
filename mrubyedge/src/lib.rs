@@ -10,6 +10,7 @@ pub enum Error {
     General,
     InvalidOpCode,
     RuntimeError(String),
+    TypeMismatch,
 }
 
 impl fmt::Display for Error {

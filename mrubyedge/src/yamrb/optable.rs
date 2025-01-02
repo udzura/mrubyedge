@@ -718,7 +718,7 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
         _ => unreachable!("send must be called on class")
     };
     let binding = klass.procs.borrow();
-    let method = binding.get(&method_id.name).unwrap();
+    let method = binding.get(&method_id.name).expect("method not found");
     if !method.is_rb_func {
         let func = method.func.clone().unwrap();
         let res = unsafe {

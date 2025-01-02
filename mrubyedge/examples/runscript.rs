@@ -22,25 +22,15 @@ fn main() -> Result<(), std::io::Error> {
     let mut bin = Vec::<u8>::new();
     file.read_to_end(&mut bin)?;
 
-    let rite = mrubyedge::rite::load(&bin).unwrap();
+    let mut rite = mrubyedge::rite::load(&bin).unwrap();
     // dbg!(&rite);
-    let mut vm = mrubyedge::vm::VM::open(rite);
-    vm.prelude().unwrap();
-    // dbg!(&vm);
-    vm.eval_insn().unwrap();
-
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    // dbg!(&vm.irep.reps);
+    let res = vm.run().unwrap();
     remove_file("/tmp/__tmp__.mrb")?;
 
     eprintln!("return value:");
-    let top = 0 as usize;
-    match vm.regs.get(&top) {
-        Some(v) => {
-            eprintln!("{:?}", v);
-            // eprintln!("{:?}", TryInto::<i32>::try_into(v.as_ref()).unwrap());
-        }
-        None => eprintln!("None"),
-    }
-
+    eprintln!("{:?}", res);
     // dbg!(&vm);
     Ok(())
 }

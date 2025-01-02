@@ -39,7 +39,7 @@ fn main() {
         pool: Vec::new(),
         reps: Vec::new(),
     };
-    let mut vm = vm::VM::new_by_irep(irep);
+    let mut vm = vm::VM::new_by_raw_irep(irep);
     vm.regs[0].replace(Rc::new(value::RObject::nil()));
     let ret = vm.run().unwrap();
     dbg!(ret);

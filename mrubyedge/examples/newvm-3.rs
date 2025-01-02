@@ -106,7 +106,7 @@ fn main() {
         pool: Vec::new(),
         reps: vec![Rc::new(irep1)],
     };
-    let mut vm = vm::VM::new_by_irep(irep0);
+    let mut vm = vm::VM::new_by_raw_irep(irep0);
     vm.regs[0].replace(Rc::new(value::RObject::nil()));
     let ret = vm.run().unwrap();
     dbg!(ret);

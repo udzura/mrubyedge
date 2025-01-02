@@ -3,6 +3,8 @@ use std::error::Error;
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use crate::rite::{insn, Irep, Rite};
+
 use super::optable::*;
 use super::value::*;
 use super::op::Op;
@@ -33,8 +35,60 @@ pub struct VM {
     pub consts: HashMap<String, Rc<RObject>>,
 }
 
+fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
+    let mut pos: usize = 0;
+    let mut ops = Vec::new();
+    while insns.len() > 0 {
+        let op = insns[0];
+        let opcode: insn::OpCode = op.try_into().unwrap();
+        let fetched = insn::FETCH_TABLE[op as usize](&mut insns).unwrap();
+        ops.push(Op::new(opcode, fetched, pos, 1 + fetched.len()));
+        pos += 1 + fetched.len();
+    }
+    ops
+}
+
+fn irep_to_irep1(irep: &mut Irep) -> IREP {
+    let mut irep1 = IREP {
+        nlocals: irep.nlocals(),  
+        nregs: irep.nregs(),
+        rlen: irep.rlen(),
+        iren: 0,
+        plen: irep.plen,
+        code: Vec::new(),
+        syms: Vec::new(),
+        pool: Vec::new(),
+        reps: Vec::new(),
+    };
+    for sym in irep.syms.iter() {
+        irep1.syms.push(RSym::new(sym.to_string_lossy().to_string()));
+    }
+    for str in irep.strvals.iter() {
+        irep1.pool.push(RPool::Str(str.to_string_lossy().to_string()));
+    }
+
+    let code = interpret_insn(&mut irep.insn);
+    irep1.code = code;
+    irep1
+}
+
+// This will consume the Rite and return the IREP
+fn rite_to_irep(rite: &mut Rite) -> IREP {
+    let mut irep0 = irep_to_irep1(&mut rite.irep[0]);
+    for rep in rite.irep[1..].iter_mut() {
+        irep0.reps.push(Rc::new(irep_to_irep1(rep)));
+    }
+    irep0
+}
+
 impl VM {
-    pub fn new_by_irep(irep: IREP) -> VM {
+    pub fn open(rite: &mut Rite) -> VM {
+        let irep = rite_to_irep(rite);
+        let vm = VM::new_by_raw_irep(irep);
+        vm
+    }
+
+    pub fn new_by_raw_irep(irep: IREP) -> VM {
         let irep = Rc::new(irep);
         let globals = HashMap::new();
         let mut consts = HashMap::new();

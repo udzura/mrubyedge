@@ -212,7 +212,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "wasm32-wasip1"
     };
 
-    sh_do("rustup override set nightly 2>/dev/null", opts.verbose)?;
     sh_do(&format!("cargo build --target {} --release", target), opts.verbose)?;
     sh_do(&format!(
         "cp ./target/{}/release/mywasm.wasm {}/{}.wasm",

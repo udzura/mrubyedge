@@ -17,25 +17,26 @@ struct ParsedOpt {
     no_wasi: bool,
     skip_cleanup: bool,
     debug_mruby_edge: bool,
+    verbose: bool,
     path: PathBuf,
 }
 
-fn sh_do(sharg: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn sh_do(sharg: &str, debug: bool) -> Result<(), Box<dyn std::error::Error>> {
     println!("running: `{}`", sharg);
     let out = Command::new("/bin/sh").args(["-c", sharg]).output()?;
-    if out.stdout.len() != 0 {
+    if debug && out.stdout.len() != 0 {
         println!(
             "stdout:\n{}",
             String::from_utf8_lossy(&out.stdout).to_string().trim()
         );
     }
-    if out.stderr.len() != 0 {
+    if debug && out.stderr.len() != 0 {
         println!(
             "stderr:\n{}",
             String::from_utf8_lossy(&out.stderr).to_string().trim()
         );
     }
-    if !out.status.success() {
+    if debug && !out.status.success() {
         println!("{:?}", out.status);
         panic!("failed to execute command");
     }
@@ -51,6 +52,12 @@ fn file_prefix_of(file: &Path) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+fn debug_println(debug: bool, msg: &str) {
+    if debug {
+        eprintln!("{}", msg);
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fnname = long("fnname").argument::<PathBuf>("FNNAME").optional();
     let skip_cleanup = long("skip-cleanup").switch();
@@ -59,11 +66,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let no_wasi = long("no-wasi").switch();
     let debug_mruby_edge = long("debug-mruby-edge").switch();
+    let verbose = long("verbose").switch();
     let opts: ParsedOpt = construct!(ParsedOpt {
         fnname,
         no_wasi,
         skip_cleanup,
         debug_mruby_edge,
+        verbose,
         path,
     })
     .to_options()
@@ -88,8 +97,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_current_dir(format!("./work-mrubyedge-{}", &suffix))?;
     std::fs::create_dir("src")?;
 
-    sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()))?;
-    sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()))?;
+    sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()), opts.verbose)?;
+    if opts.verbose {
+        sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()), opts.verbose)?;
+    } else {
+        sh_do(&format!("mrbc src/{}.rb", &fname.to_string()), opts.verbose)?;
+    }
 
     let feature = if opts.no_wasi { "no-wasi" } else { "default" };
 
@@ -115,9 +128,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let import_rbs_fname = format!("{}.import.rbs", fname);
     let import_rbs = mrubyfile.parent().unwrap().join(&import_rbs_fname);
     if import_rbs.exists() {
-        eprintln!(
-            "detected import.rbs: {}",
-            import_rbs.as_path().to_string_lossy()
+        debug_println(
+            opts.verbose,
+            &format!("detected import.rbs: {}", import_rbs.as_path().to_string_lossy()),
         );
         let mut f = File::open(import_rbs)?;
         let mut s = String::new();
@@ -136,10 +149,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if export_rbs.exists() {
-        eprintln!(
+        debug_println(opts.verbose, &format!(
             "detected export.rbs: {}",
             export_rbs.as_path().to_string_lossy()
-        );
+        ));
         let mut f = File::open(export_rbs)?;
         let mut s = String::new();
         f.read_to_string(&mut s)?;
@@ -189,31 +202,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let rendered = lib_rs.render()?;
         cont = rendered;
     }
-    println!("[debug] will generate main.rs:");
-    println!("{}", &cont);
+    debug_println(opts.verbose, "[debug] will generate main.rs:");
+    debug_println(opts.verbose, &format!("{}", &cont));
     std::fs::write("src/lib.rs", cont)?;
 
     let target = if opts.no_wasi {
         "wasm32-unknown-unknown"
     } else {
-        "wasm32-wasi"
+        "wasm32-wasip1"
     };
 
-    sh_do("rustup override set nightly 2>/dev/null")?;
-    sh_do(&format!("cargo build --target {} --release", target))?;
+    sh_do("rustup override set nightly 2>/dev/null", opts.verbose)?;
+    sh_do(&format!("cargo build --target {} --release", target), opts.verbose)?;
     sh_do(&format!(
         "cp ./target/{}/release/mywasm.wasm {}/{}.wasm",
         target,
         &pwd.to_str().unwrap(),
         &fname.to_string()
-    ))?;
+    ), opts.verbose)?;
     if opts.skip_cleanup {
         println!(
             "debug: working directory for compile wasm is remained in {}",
             std::env::current_dir()?.as_os_str().to_str().unwrap()
         );
     } else {
-        sh_do(&format!("cd .. && rm -rf work-mrubyedge-{}", &suffix))?;
+        sh_do(&format!("cd .. && rm -rf work-mrubyedge-{}", &suffix), opts.verbose)?;
     }
 
     std::env::set_current_dir(pwd)?;

@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 #![allow(non_snake_case)]
+#![allow(unused_imports)]
 extern crate mrubyedge;
 
 use std::rc::Rc;
@@ -32,7 +33,7 @@ extern "C" {
 
 {% for fn in ftypes_imports %}
 {{ fn.import_helper_var }}
-fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, _self: &RObject, args: &[Rc<RObject>]) -> Rc<RObject> {
+fn __imported_c_{{ fn.func_name }}(_vm: &mut mrubyedge::yamrb::vm::VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, mrubyedge::Error> {
 {{ fn.imported_body }}
 }
 {% endfor %}
@@ -44,20 +45,16 @@ fn __imported_c_{{ fn.func_name }}<'insn>(_vm: &mut VM<'insn>, _self: &RObject, 
 pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     let mut rite = mrubyedge::rite::load(DATA).unwrap();
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
-    vm.run().unwrap();
 
-{% set index = 1 %}
 {% for ifn in ftypes_imports %}
-    let klass = mrb_helper::mrb_get_target_class(&mut vm);
-    let method = RMethod {
-        sym_id: 1000000 + {{ index }},
-        body: mrubyedge::vm::Method::CMethod(__imported_c_{{ ifn.func_name }}),
-    };
-    mrb_helper::mrb_define_method(&mut vm, klass, "{{ ifn.func_name }}", method);
-{% set index = index + 1 %}
+    let klass = vm.object_class.clone();
+    let method = Box::new(__imported_c_{{ ifn.func_name }});
+    mrubyedge::yamrb::helpers::mrb_define_cmethod(&mut vm, klass, "{{ ifn.func_name }}", method);
 {% endfor %}
 
     {{ fn.str_args_converter }}
+
+    vm.run().unwrap();
 
     let args = {{ fn.args_let_vec }};
     let retval: Result<Rc<RObject>, mrubyedge::Error> = 

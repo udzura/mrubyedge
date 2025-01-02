@@ -185,6 +185,10 @@ impl VM {
         &mut self.regs[self.current_regs_offset..]
     }
 
+    pub fn getself(&mut self) -> Rc<RObject> {
+        self.current_regs()[0].clone().unwrap()
+    }
+
     pub(crate) fn register_fn(&mut self, f: RFn) -> usize {
         self.fn_table.push(Rc::new(f));
         return self.fn_table.len() - 1;

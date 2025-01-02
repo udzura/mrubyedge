@@ -217,13 +217,13 @@ unsafe {{
         }
 
         let ret_mruby_type = match self.rettype.as_str() {
-            "Integer" => "RObject::RInteger(r0 as i64)",
-            "Float" => "RObject::RInteger(r0 as f64)",
-            "String" => "RObject::RString(s0)",
-            "void" => "RObject::Nil",
+            "Integer" => "RObject::integer(r0 as i64)",
+            "Float" => "RObject::float(r0 as f64)",
+            "String" => "RObject::string(s0)",
+            "void" => "RObject::nil()",
             _ => unimplemented!("unsupported arg type"),
         };
-        buf.push_str(&format!("Rc::new({})\n", ret_mruby_type));
+        buf.push_str(&format!("Ok(Rc::new({}))\n", ret_mruby_type));
         buf.leak()
     }
 }

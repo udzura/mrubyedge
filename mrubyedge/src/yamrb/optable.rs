@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{rite::insn::{Fetched, OpCode}, Error};
+use crate::rite::insn::{Fetched, OpCode};
 
 use super::{value::*, vm::*};
 

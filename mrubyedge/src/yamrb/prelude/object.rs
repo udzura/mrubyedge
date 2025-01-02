@@ -1,4 +1,4 @@
-use std::{os::raw::c_void, rc::Rc};
+use std::rc::Rc;
 
 use crate::{yamrb::{value::*, vm::VM}, Error};
 

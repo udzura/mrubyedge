@@ -2,6 +2,7 @@ extern crate bpaf;
 extern crate rand;
 
 const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "1.0.0-rc1";
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 use std::{fs::File, io::Read, path::{Path, PathBuf}, process::Command, str};
 
@@ -58,12 +59,15 @@ fn debug_println(debug: bool, msg: &str) {
     }
 }
 
+fn not_help_or_version_flag(buf: PathBuf) -> Option<PathBuf> {
+    let x = buf.to_str().unwrap();
+    (x != "--help" && x != "-h" && x != "--version" && x != "-V").then_some(buf)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fnname = long("fnname").argument::<PathBuf>("FNNAME").optional();
     let skip_cleanup = long("skip-cleanup").switch();
-    let path = any::<PathBuf, _, _>("MRUBY_FILE", |x| {
-        (x.to_str().unwrap() != "--help").then_some(x)
-    });
+    let path = any::<PathBuf, _, _>("MRUBY_FILE", not_help_or_version_flag);
     let no_wasi = long("no-wasi").switch();
     let debug_mruby_edge = long("debug-mruby-edge").switch();
     let verbose = long("verbose").switch();
@@ -78,6 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .to_options()
     .descr("mec - An mruby/edge compilation cli")
     .fallback_to_usage()
+    .version(VERSION)
     .run();
 
     let mut rng = rand::thread_rng();

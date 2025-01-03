@@ -39,59 +39,6 @@ pub struct VM {
     pub fn_table: Vec<Rc<RFn>>,
 }
 
-fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
-    let mut pos: usize = 0;
-    let mut ops = Vec::new();
-    while insns.len() > 0 {
-        let op = insns[0];
-        let opcode: insn::OpCode = op.try_into().unwrap();
-        let fetched = insn::FETCH_TABLE[op as usize](&mut insns).unwrap();
-        ops.push(Op::new(opcode, fetched, pos, 1 + fetched.len()));
-        pos += 1 + fetched.len();
-    }
-    ops
-}
-
-fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
-    let irep = &mut reps[pos];
-    let mut irep1 = IREP {
-        nlocals: irep.nlocals(),  
-        nregs: irep.nregs(),
-        rlen: irep.rlen(),
-        code: Vec::new(),
-        syms: Vec::new(),
-        pool: Vec::new(),
-        reps: Vec::new(),
-    };
-    for sym in irep.syms.iter() {
-        irep1.syms.push(RSym::new(sym.to_string_lossy().to_string()));
-    }
-    for str in irep.strvals.iter() {
-        irep1.pool.push(RPool::Str(str.to_string_lossy().to_string()));
-    }
-
-    let code = interpret_insn(&mut irep.insn);
-    irep1.code = code;
-    (irep1, pos + 1)
-}
-
-fn load_irep_0(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
-    let (mut irep0, newpos) = load_irep_1(reps, pos);
-    let mut pos = newpos;
-    for _ in 0..irep0.rlen {
-        let (rep, newpos) = load_irep_0(reps, pos);
-        pos = newpos;
-        irep0.reps.push(Rc::new(rep));
-    }
-    (irep0, pos)
-}
-
-// This will consume the Rite object and return the IREP
-fn rite_to_irep(rite: &mut Rite) -> IREP {
-    let (irep0, _) = load_irep_0(&mut rite.irep, 0);
-    irep0
-}
-
 impl VM {
     pub fn open(rite: &mut Rite) -> VM {
         let irep = rite_to_irep(rite);
@@ -217,6 +164,81 @@ impl VM {
     pub fn get_class_by_name(&self, name: &str) -> Rc<RClass> {
         self.builtin_class_table.get(name).cloned().unwrap()
     }
+
+    pub(crate) fn define_class(&mut self, name: &str, superclass: Option<Rc<RClass>>) -> Rc<RClass> {
+        let superclass = match superclass {
+            Some(c) => c,
+            None => self.object_class.clone(),
+        };
+        let class = Rc::new(
+            RClass::new(name, Some(superclass)),
+        );
+        let object = Rc::new(RObject {
+            tt: RType::Class,
+            value: RValue::Class(class.clone()),
+        });
+        self.consts.insert(name.to_string(), object);
+        class
+    }
+
+    pub(crate) fn define_standard_class(&mut self, name: &'static str) -> Rc<RClass> {
+        let class = self.define_class(name, None);
+        self.builtin_class_table.insert(name, class.clone());
+        class
+    }
+}
+
+fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
+    let mut pos: usize = 0;
+    let mut ops = Vec::new();
+    while insns.len() > 0 {
+        let op = insns[0];
+        let opcode: insn::OpCode = op.try_into().unwrap();
+        let fetched = insn::FETCH_TABLE[op as usize](&mut insns).unwrap();
+        ops.push(Op::new(opcode, fetched, pos, 1 + fetched.len()));
+        pos += 1 + fetched.len();
+    }
+    ops
+}
+
+fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
+    let irep = &mut reps[pos];
+    let mut irep1 = IREP {
+        nlocals: irep.nlocals(),  
+        nregs: irep.nregs(),
+        rlen: irep.rlen(),
+        code: Vec::new(),
+        syms: Vec::new(),
+        pool: Vec::new(),
+        reps: Vec::new(),
+    };
+    for sym in irep.syms.iter() {
+        irep1.syms.push(RSym::new(sym.to_string_lossy().to_string()));
+    }
+    for str in irep.strvals.iter() {
+        irep1.pool.push(RPool::Str(str.to_string_lossy().to_string()));
+    }
+
+    let code = interpret_insn(&mut irep.insn);
+    irep1.code = code;
+    (irep1, pos + 1)
+}
+
+fn load_irep_0(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
+    let (mut irep0, newpos) = load_irep_1(reps, pos);
+    let mut pos = newpos;
+    for _ in 0..irep0.rlen {
+        let (rep, newpos) = load_irep_0(reps, pos);
+        pos = newpos;
+        irep0.reps.push(Rc::new(rep));
+    }
+    (irep0, pos)
+}
+
+// This will consume the Rite object and return the IREP
+fn rite_to_irep(rite: &mut Rite) -> IREP {
+    let (irep0, _) = load_irep_0(&mut rite.irep, 0);
+    irep0
 }
 
 #[derive(Debug, Clone)]

@@ -246,6 +246,20 @@ impl RClass {
         let consts   = self.consts.borrow();
         consts.get(name).map(|v| v.clone())
     }
+
+    // find_method will search method from self to superclass
+    pub fn find_method(&self, name: &str) -> Option<RProc> {
+        let procs = self.procs.borrow();
+        match procs.get(name) {
+            Some(p) => Some(p.clone()),
+            None => {
+                match &self.super_class {
+                    Some(sc) => sc.find_method(name),
+                    None => None,
+                }
+            }
+        }
+    }
 }
 
 impl From<Rc<RClass>> for RObject {
@@ -269,7 +283,7 @@ pub struct RInstance {
 pub struct RProc {
     pub is_rb_func: bool,
     pub sym_id: Option<RSym>,
-    pub next: Option<Box<RProc>>,
+    pub next: Option<Rc<RProc>>,
     pub irep: Option<Rc<IREP>>,
     pub func: Option<usize>,}
 

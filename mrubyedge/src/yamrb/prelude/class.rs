@@ -2,14 +2,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{yamrb::{helpers::{mrb_define_cmethod, mrb_funcall}, value::*, vm::VM}, Error};
 
-use super::define_standard_class;
-
 pub(crate) fn initialize_class(vm: &mut VM) {
-    let class_class = define_standard_class(vm, "Class");
+    let class_class = vm.define_standard_class("Class");
 
-        let mrb_class_new = 
-            Box::new(mrb_class_new);
-        mrb_define_cmethod(vm, class_class.clone(), "new", mrb_class_new);
+    let mrb_class_new = 
+        Box::new(mrb_class_new);
+    mrb_define_cmethod(vm, class_class.clone(), "new", mrb_class_new);
 }
 
 fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {

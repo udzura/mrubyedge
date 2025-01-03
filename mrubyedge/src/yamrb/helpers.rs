@@ -5,28 +5,47 @@ use crate::Error;
 use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym}, vm::VM};
 
 pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: String, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let top_self = match top_self {
+    let recv = match top_self {
         Some(obj) => obj,
         None => vm.current_regs()[0].as_ref().unwrap().clone(),
     };
-    let binding = top_self.get_class(vm);
-    let binding = binding.procs.borrow();
-    let method = binding.get(&name).unwrap();
+    let binding = recv.get_class(vm);
+    let method = binding.find_method(name.as_str()).expect("Method not found");
+    
     if method.is_rb_func {
-        vm.current_regs()[0].replace(top_self.clone());
+        push_callinfo(vm, RSym::new(name), 0);
+
+        // let old_irep = vm.current_irep.clone();
+        let old_callinfo = vm.current_callinfo.take();
+
+        vm.current_regs()[0].replace(recv.clone());
         for (i, arg) in args.iter().enumerate() {
             vm.current_regs()[i + 1].replace(arg.clone());
         }
-        push_callinfo(vm, RSym::new(name), args.len());
     
         vm.pc.set(0);
         vm.current_irep = method.irep.as_ref().unwrap().clone();
         let res = vm.run().unwrap();
 
+        if let Some(ci) = old_callinfo {
+            if ci.prev.is_some() {
+                vm.current_callinfo.replace(ci.prev.clone().unwrap());
+            }
+            vm.current_irep = ci.pc_irep.clone();
+            vm.pc.set(ci.pc);
+            vm.current_regs_offset = ci.current_regs_offset;
+            vm.target_class = ci.target_class.clone();
+        }
+ 
         Ok(res.clone())
     } else {
+        vm.current_regs_offset += 2;
+        vm.current_regs()[0].replace(recv.clone());
+
         let func = vm.fn_table[method.func.unwrap()].clone();
         let res = func(vm, &args);
+        vm.current_regs_offset -= 2;
+
         if res.is_err() {
             vm.error_code = 255;
         }

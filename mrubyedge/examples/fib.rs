@@ -16,7 +16,7 @@ fn main() {
     eprintln!("{:?}", vm.run().unwrap());
     // dbg!(&vm);
     let args = vec![
-        Rc::new(RObject::integer(12))
+        Rc::new(RObject::integer(25))
     ];
     match mrb_funcall(&mut vm, None, "fib".to_string(), &args) {
         Ok(retval) => {

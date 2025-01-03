@@ -676,8 +676,9 @@ pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched, end_pos: usize) {
 
 pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
-    let val = vm.current_regs()[b as usize].clone();
-    vm.current_regs()[a as usize].replace(val.unwrap());
+    let val = vm.current_regs()[b as usize].clone().
+        expect(&format!("register {} is empty", b));
+    vm.current_regs()[a as usize].replace(val);
 }
 
 pub(crate) fn op_ssend(vm: &mut VM, operand: &Fetched) {
@@ -714,8 +715,7 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
 
     let method_id = vm.current_irep.syms[b as usize].clone();
     let klass = recv.get_class(vm);
-    let binding = klass.procs.borrow();
-    let method = binding.get(&method_id.name).expect("method not found");
+    let method = klass.find_method(&method_id.name).expect("method not found. TODO: medthod_missing");
     if !method.is_rb_func {
         let func = vm.get_fn(method.func.unwrap()).unwrap();
         vm.current_regs_offset += a as usize;
@@ -739,7 +739,7 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
     push_callinfo(vm, method_id, c as usize);
 
     vm.pc.set(0);
-    vm.current_irep = method.irep.as_ref().unwrap().clone();
+    vm.current_irep = method.irep.unwrap();
     vm.current_regs_offset += a as usize;
 }
 
@@ -805,8 +805,6 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     let regs0 = vm.current_regs();
     if let Some(regs_a) = regs0[a].take() {
         regs0[0].replace(regs_a);
-    } else {
-        regs0[0].take();
     }
     for i in 1..nregs {
         regs0[i].take();
@@ -1153,7 +1151,9 @@ pub(crate) fn op_class(vm: &mut VM, operand: &Fetched) {
             vm.object_class.clone()
         }
     };
-    let klass = Rc::new(RClass::new(&name.name, Some(superclass)));
+    let name = name.name;
+    let klass = vm.define_class(&name, Some(superclass));
+
     vm.current_regs()[a as usize].replace(Rc::new(klass.into()));
 }
 

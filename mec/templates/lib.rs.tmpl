@@ -61,7 +61,7 @@ pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
         mrubyedge::yamrb::helpers::mrb_funcall(
             &mut vm,
             None,
-            "{{ fn.func_name }}".to_string(),
+            "{{ fn.func_name }}",
             &args);
 
     match &retval {

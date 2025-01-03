@@ -14,7 +14,7 @@ fn main() {
     let args = vec![
     ];
 
-    match mrb_funcall(&mut vm, None, "hello".to_string(), &args) {
+    match mrb_funcall(&mut vm, None, "hello", &args) {
         Ok(retval) => {
             dbg!(retval);
         }

@@ -18,6 +18,12 @@ pub(crate) fn initialize_object(vm: &mut VM) {
 
     mrb_define_cmethod(vm, object_class.clone(), "initialize", Box::new(mrb_object_initialize));
     mrb_define_cmethod(vm, object_class.clone(), "===", Box::new(mrb_object_triple_eq));
+
+    // define global consts:
+    vm.consts.insert("RUBY_VERSION".to_string(), Rc::new(RObject::string(crate::yamrb::vm::VERSION.to_string())));
+    vm.consts.insert("MRUBY_VERSION".to_string(), Rc::new(RObject::string(crate::yamrb::vm::VERSION.to_string())));
+    vm.consts.insert("MRUBY_EDGE_VERSION".to_string(), Rc::new(RObject::string(crate::yamrb::vm::VERSION.to_string())));
+    vm.consts.insert("RUBY_ENGINE".to_string(), Rc::new(RObject::string(crate::yamrb::vm::ENGINE.to_string())));
 }
 
 #[cfg(feature = "wasi")]

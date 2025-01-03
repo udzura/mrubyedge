@@ -11,6 +11,9 @@ use super::prelude::prelude;
 use super::value::*;
 use super::op::Op;
 
+pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub const ENGINE: &'static str = "mruby/edge";
+
 const MAX_REGS_SIZE: usize = 256;
 
 pub struct VM {

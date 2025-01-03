@@ -1,21 +1,13 @@
 extern crate mrubyedge;
+use mrubyedge::rite;
+use mrubyedge::yamrb::*;
 
 fn main() {
-    let bin = include_bytes!("./def.mrb");
-    let rite = mrubyedge::rite::load(bin).unwrap();
+    let bin = include_bytes!("./def3.mrb");
+    let mut rite = rite::load(bin).unwrap();
     // dbg!(&rite);
-    let mut vm = mrubyedge::vm::VM::open(rite);
-    vm.prelude().unwrap();
-    // dbg!(&vm);
-    vm.eval_insn().unwrap();
+    let mut vm = vm::VM::open(&mut rite);
 
     eprintln!("return value:");
-    let top = 0 as usize;
-    match vm.regs.get(&top) {
-        Some(v) => eprintln!("{:?}", v),
-        None => eprintln!("None"),
-    }
-
-    // dbg!(&vm);
-    ()
+    eprintln!("{:?}", vm.run().unwrap());
 }

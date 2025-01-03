@@ -1,18 +1,16 @@
 pub mod eval;
-pub mod klass;
 pub mod rite;
-pub mod value;
-pub mod vm;
-
-pub mod mrb_helper;
+pub mod yamrb;
 
 use std::error;
 use std::fmt;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
     General,
     InvalidOpCode,
+    RuntimeError(String),
+    TypeMismatch,
 }
 
 impl fmt::Display for Error {

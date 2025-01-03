@@ -29,6 +29,24 @@ pub struct Irep<'a> {
     pub syms: Vec<CString>,
 }
 
+impl Irep<'_> {
+    pub fn nlocals(&self) -> usize {
+        be16_to_u16(self.header.nlocals) as usize
+    }
+
+    pub fn nregs(&self) -> usize {
+        be16_to_u16(self.header.nregs) as usize
+    }
+
+    pub fn rlen(&self) -> usize {
+        be16_to_u16(self.header.rlen) as usize
+    }
+
+    pub fn clen(&self) -> usize {
+        be16_to_u16(self.header.clen) as usize
+    }
+}
+
 #[derive(Debug)]
 pub struct LVar {
     pub header: SectionMiscHeader,

@@ -1,3 +1,4 @@
 def hello
-  "Rust World"
+  puts "Rust World"
+  "OK"
 end

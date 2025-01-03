@@ -8,39 +8,36 @@ extern crate mrubyedge;
 fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().skip(1).collect();
     let path = &args[0];
+    let is_verbose = env::var("MRUBYEDGE_DEBUG").is_ok();
 
-    let output = Command::new("mrbc")
-        .arg("-v")
-        .arg("-o")
+    let mut mrbc = Command::new("mrbc");
+    if is_verbose {
+        mrbc.arg("-v");
+    }
+    let result = mrbc.arg("-o")
         .arg("/tmp/__tmp__.mrb")
         .arg(path)
         .output()
         .expect("failed to compile mruby script");
-    eprintln!("debug: {}", String::from_utf8_lossy(&output.stdout));
+    if is_verbose {
+        eprintln!("stdout: {}", String::from_utf8_lossy(&result.stdout));
+        eprintln!("stderr: {}", String::from_utf8_lossy(&result.stderr));
+    }
 
     let mut file = File::open("/tmp/__tmp__.mrb")?;
     let mut bin = Vec::<u8>::new();
     file.read_to_end(&mut bin)?;
 
-    let rite = mrubyedge::rite::load(&bin).unwrap();
+    let mut rite = mrubyedge::rite::load(&bin).unwrap();
     // dbg!(&rite);
-    let mut vm = mrubyedge::vm::VM::open(rite);
-    vm.prelude().unwrap();
-    // dbg!(&vm);
-    vm.eval_insn().unwrap();
-
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    if is_verbose {
+        dbg!(&vm.irep);
+    }
+    let res = vm.run().unwrap();
     remove_file("/tmp/__tmp__.mrb")?;
 
-    eprintln!("return value:");
-    let top = 0 as usize;
-    match vm.regs.get(&top) {
-        Some(v) => {
-            eprintln!("{:?}", v);
-            // eprintln!("{:?}", TryInto::<i32>::try_into(v.as_ref()).unwrap());
-        }
-        None => eprintln!("None"),
-    }
-
+    eprintln!("return value: {:?}", res);
     // dbg!(&vm);
     Ok(())
 }

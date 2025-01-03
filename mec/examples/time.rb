@@ -1,3 +1,5 @@
 def getnow
-  p Time.now.to_i
+  v = getnowfromreal
+  p v
+  v
 end

@@ -72,6 +72,19 @@ impl Fetched {
             _ => Err(Error::InvalidOperand),
         }
     }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Fetched::Z => 0,
+            Fetched::B(_) => 1,
+            Fetched::BB(_, _) => 2,
+            Fetched::BBB(_, _, _) => 3,
+            Fetched::BS(_, _) => 3,
+            Fetched::BSS(_, _, _) => 5,
+            Fetched::S(_) => 2,
+            Fetched::W(_) => 3,
+        }
+    }
 }
 
 // from mruby 3.2.0 op.h

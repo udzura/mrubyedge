@@ -19,7 +19,7 @@ end
 
 def main
   obj = OhMyClass.new
-  debug obj
+  puts "First value: #{obj.value}"
   obj.update(123)
   obj.hello
 end

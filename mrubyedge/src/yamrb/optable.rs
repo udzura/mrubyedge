@@ -174,6 +174,12 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         LOADI_7 => {
             op_loadi_n(vm, 7, &operand);
         }
+        LOADI16 => {
+            op_loadi16(vm, &operand);
+        }
+        LOADI32 => {
+            op_loadi32(vm, &operand);
+        }
         LOADSYM => {
             op_loadsym(vm, &operand);
         }
@@ -492,6 +498,18 @@ pub(crate) fn op_loadl(vm: &mut VM, operand: &Fetched) {
     // TODO: support other rpool types?
     let val = Rc::new(RObject::string(val.as_str().to_string()));
     vm.current_regs()[a as usize].replace(val);
+}
+
+pub(crate) fn op_loadi16(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bs().unwrap();
+    let val = RObject::integer(b as i64);
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_loadi32(vm: &mut VM, operand: &Fetched) {
+    let (a, b, c) = operand.as_bss().unwrap();
+    let val = RObject::integer((b as i64) << 16 | c as i64);
+    vm.current_regs()[a as usize].replace(Rc::new(val));
 }
 
 pub(crate) fn op_loadi(vm: &mut VM, operand: &Fetched) {

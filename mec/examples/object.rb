@@ -16,7 +16,7 @@ class MyMRubyClass
   end
 end
 
-def main
+def __main__
   obj = MyMRubyClass.new(123)
   obj.print_self
   obj.update(456)

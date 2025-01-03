@@ -1,1 +1,1 @@
-def main: () -> void
+def __main__: () -> Integer

@@ -28,7 +28,7 @@ fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error
         }),
     });
 
-    mrb_funcall(vm, Some(obj.clone()), "initialize".to_string(), args)?;
+    mrb_funcall(vm, Some(obj.clone()), "initialize", args)?;
 
     Ok(obj)
 }

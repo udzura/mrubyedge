@@ -4,16 +4,16 @@ use crate::Error;
 
 use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym}, vm::VM};
 
-pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: String, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: &str, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let recv = match top_self {
         Some(obj) => obj,
         None => vm.current_regs()[0].as_ref().unwrap().clone(),
     };
     let binding = recv.get_class(vm);
-    let method = binding.find_method(name.as_str()).expect("Method not found");
+    let method = binding.find_method(name).expect("Method not found");
     
     if method.is_rb_func {
-        push_callinfo(vm, RSym::new(name), 0);
+        push_callinfo(vm, RSym::new(name.to_string()), 0);
 
         // let old_irep = vm.current_irep.clone();
         let old_callinfo = vm.current_callinfo.take();

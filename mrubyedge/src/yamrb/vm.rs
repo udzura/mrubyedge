@@ -7,8 +7,7 @@ use std::collections::HashMap;
 use crate::rite::{insn, Irep, Rite};
 
 use super::optable::*;
-use super::prelude::class::initialize_class;
-use super::prelude::object::initialize_object;
+use super::prelude::prelude;
 use super::value::*;
 use super::op::Op;
 
@@ -92,8 +91,7 @@ impl VM {
             fn_table
         };
 
-        initialize_object(&mut vm);
-        initialize_class(&mut vm);
+        prelude(&mut vm);
         
         vm
     }
@@ -162,7 +160,7 @@ impl VM {
     }
 
     pub fn get_class_by_name(&self, name: &str) -> Rc<RClass> {
-        self.builtin_class_table.get(name).cloned().unwrap()
+        self.builtin_class_table.get(name).cloned().expect(format!("Class {} not found", name).as_str())
     }
 
     pub(crate) fn define_class(&mut self, name: &str, superclass: Option<Rc<RClass>>) -> Rc<RClass> {

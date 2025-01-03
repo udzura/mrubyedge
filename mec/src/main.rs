@@ -38,7 +38,7 @@ fn sh_do(sharg: &str, debug: bool) -> Result<(), Box<dyn std::error::Error>> {
             String::from_utf8_lossy(&out.stderr).to_string().trim()
         );
     }
-    if debug && !out.status.success() {
+    if !out.status.success() {
         println!("{:?}", out.status);
         panic!("failed to execute command");
     }

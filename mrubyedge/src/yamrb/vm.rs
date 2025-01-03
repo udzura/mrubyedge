@@ -1,4 +1,5 @@
 use std::cell::{Cell, RefCell};
+use std::env;
 use std::error::Error;
 use std::rc::Rc;
 use std::collections::HashMap;
@@ -51,10 +52,12 @@ fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
     ops
 }
 
-fn irep_to_irep1(irep: &mut Irep) -> IREP {
+fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
+    let irep = &mut reps[pos];
     let mut irep1 = IREP {
         nlocals: irep.nlocals(),  
         nregs: irep.nregs(),
+        rlen: irep.rlen(),
         code: Vec::new(),
         syms: Vec::new(),
         pool: Vec::new(),
@@ -69,15 +72,23 @@ fn irep_to_irep1(irep: &mut Irep) -> IREP {
 
     let code = interpret_insn(&mut irep.insn);
     irep1.code = code;
-    irep1
+    (irep1, pos + 1)
 }
 
-// This will consume the Rite and return the IREP
-fn rite_to_irep(rite: &mut Rite) -> IREP {
-    let mut irep0 = irep_to_irep1(&mut rite.irep[0]);
-    for rep in rite.irep[1..].iter_mut() {
-        irep0.reps.push(Rc::new(irep_to_irep1(rep)));
+fn load_irep_0(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
+    let (mut irep0, newpos) = load_irep_1(reps, pos);
+    let mut pos = newpos;
+    for _ in 0..irep0.rlen {
+        let (rep, newpos) = load_irep_0(reps, pos);
+        pos = newpos;
+        irep0.reps.push(Rc::new(rep));
     }
+    (irep0, pos)
+}
+
+// This will consume the Rite object and return the IREP
+fn rite_to_irep(rite: &mut Rite) -> IREP {
+    let (irep0, _) = load_irep_0(&mut rite.irep, 0);
     irep0
 }
 
@@ -165,6 +176,9 @@ impl VM {
             let operand = op.operand;
             self.pc.set(pc + 1);
 
+            if env::var("MRUBYEDGE_DEBUG").is_ok() {
+                eprintln!("{:?}: {:?} (pos={} len={})", &op.code, &op.operand, op.pos, op.len);
+            }
             consume_expr(self, op.code, &operand, op.pos, op.len);
 
             if self.flag_preemption.get() {
@@ -209,6 +223,7 @@ impl VM {
 pub struct IREP {
     pub nlocals: usize,
     pub nregs: usize, // NOTE: is u8 better?
+    pub rlen: usize,
     pub code: Vec<Op>,
     pub syms: Vec<RSym>,
     pub pool: Vec<RPool>,

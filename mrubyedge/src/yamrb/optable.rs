@@ -131,7 +131,6 @@ use super::{value::*, vm::*};
 
 pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: usize, len: usize) {
     use crate::rite::insn::OpCode::*;
-    // dbg!(&code, &operand);
     match code {
         NOP => {
             op_nop(vm, &operand);

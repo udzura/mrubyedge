@@ -21,6 +21,7 @@ fn main() {
     let irep = vm::IREP {
         nlocals: 0,
         nregs: 7,
+        rlen: 0,
         code: vec![
             op::Op { code: OpCode::LOADI_1, operand: Fetched::B(1), pos: 0, len: 2 },
             op::Op { code: OpCode::LOADI_2, operand: Fetched::B(2), pos: 2, len: 2 },

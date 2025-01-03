@@ -31,7 +31,9 @@ fn main() -> Result<(), std::io::Error> {
     let mut rite = mrubyedge::rite::load(&bin).unwrap();
     // dbg!(&rite);
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
-    // dbg!(&vm.irep.reps);
+    if is_verbose {
+        dbg!(&vm.irep);
+    }
     let res = vm.run().unwrap();
     remove_file("/tmp/__tmp__.mrb")?;
 

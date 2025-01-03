@@ -42,6 +42,7 @@ fn main() {
     let irep1 = vm::IREP {
         nlocals: 3,
         nregs: 8,
+        rlen: 0,
         code: vec![
             op::Op { code: OpCode::ENTER, operand: Fetched::W(0x40000), pos: 0, len: 4 },
             op::Op { code: OpCode::MOVE, operand: Fetched::BB(3, 1), pos: 4, len: 3 },
@@ -87,6 +88,7 @@ fn main() {
     let irep0 = vm::IREP {
         nlocals: 1,
         nregs: 3,
+        rlen: 1,
         code: vec![
             op::Op { code: OpCode::TCLASS, operand: Fetched::B(1), pos: 0, len: 2 },
             op::Op { code: OpCode::METHOD, operand: Fetched::BB(2, 0), pos: 2, len: 3 },

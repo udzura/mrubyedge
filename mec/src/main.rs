@@ -1,7 +1,7 @@
 extern crate bpaf;
 extern crate rand;
 
-const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "1.0.0-rc1";
+const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "1.0.0-rc2";
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 use std::{fs::File, io::Read, path::{Path, PathBuf}, process::Command, str};
@@ -15,6 +15,7 @@ use mec::template::{cargo_toml::CargoTomlDebug, CargoToml, LibRs};
 #[derive(Debug, Clone)]
 struct ParsedOpt {
     fnname: Option<PathBuf>,
+    mruby_edge_version: Option<String>,
     no_wasi: bool,
     skip_cleanup: bool,
     debug_mruby_edge: bool,
@@ -66,6 +67,7 @@ fn not_help_or_version_flag(buf: PathBuf) -> Option<PathBuf> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fnname = long("fnname").argument::<PathBuf>("FNNAME").optional();
+    let mruby_edge_version = long("mruby-edge-version").argument::<String>("MRBE_VERSION").optional();
     let skip_cleanup = long("skip-cleanup").switch();
     let path = any::<PathBuf, _, _>("MRUBY_FILE", not_help_or_version_flag);
     let no_wasi = long("no-wasi").switch();
@@ -73,6 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let verbose = long("verbose").switch();
     let opts: ParsedOpt = construct!(ParsedOpt {
         fnname,
+        mruby_edge_version,
         no_wasi,
         skip_cleanup,
         debug_mruby_edge,
@@ -119,7 +122,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     } else {
         let cargo_toml = CargoToml {
-            mrubyedge_version: MRUBY_EDGE_DEFAULT_VERSION,
+            mrubyedge_version: &opts.mruby_edge_version.unwrap_or_else(|| MRUBY_EDGE_DEFAULT_VERSION.to_string()),
             mrubyedge_feature: feature,
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;

@@ -124,6 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cargo_toml = CargoToml {
             mrubyedge_version: &opts.mruby_edge_version.unwrap_or_else(|| MRUBY_EDGE_DEFAULT_VERSION.to_string()),
             mrubyedge_feature: feature,
+            strip: "true",
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     }

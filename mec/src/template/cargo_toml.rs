@@ -6,6 +6,7 @@ use askama::Template;
 pub struct CargoToml<'a> {
     pub mrubyedge_version: &'a str,
     pub mrubyedge_feature: &'a str,
+    pub strip: &'a str,
 }
 
 #[derive(Template)]

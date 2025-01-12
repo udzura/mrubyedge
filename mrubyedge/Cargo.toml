@@ -15,6 +15,7 @@ simple_endian = "0.3"
 
 [dev-dependencies]
 criterion = "0.5.1"
+mec-mrbc-sys = "3.3.1"
 
 [[bench]]
 name = "benchmark"

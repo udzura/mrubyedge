@@ -1,10 +1,11 @@
 extern crate bpaf;
 extern crate rand;
+extern crate mec_mrbc_sys;
 
 const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "1.0.0-rc2";
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-use std::{fs::File, io::Read, path::{Path, PathBuf}, process::Command, str};
+use std::{ffi::CStr, fs::File, io::Read, path::{Path, PathBuf}, process::Command, str};
 
 use askama::Template;
 use bpaf::{any, construct, long, Parser};
@@ -106,10 +107,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir("src")?;
 
     sh_do(&format!("cp {} src/", mrubyfile.to_str().unwrap()), opts.verbose)?;
+
+    let out_file = format!("src/{}.mrb\0", fname);
+    let in_file = format!("src/{}.rb\0", fname);
     if opts.verbose {
-        sh_do(&format!("mrbc --verbose src/{}.rb", &fname.to_string()), opts.verbose)?;
+        let args = [
+            CStr::from_bytes_with_nul(b"mrbc\0").unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(b"-v\0").unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(b"-o\0").unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(out_file.as_bytes()).unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(in_file.as_bytes()).unwrap().as_ptr(),
+        ];
+    
+        unsafe {
+            mec_mrbc_sys::mrbc_main(args.len() as i32, args.as_ptr() as *mut *mut i8);
+        }
     } else {
-        sh_do(&format!("mrbc src/{}.rb", &fname.to_string()), opts.verbose)?;
+        let args = [
+            CStr::from_bytes_with_nul(b"mrbc\0").unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(b"-o\0").unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(out_file.as_bytes()).unwrap().as_ptr(),
+            CStr::from_bytes_with_nul(in_file.as_bytes()).unwrap().as_ptr(),
+        ];
+    
+        unsafe {
+            mec_mrbc_sys::mrbc_main(args.len() as i32, args.as_ptr() as *mut *mut i8);
+        }
     }
 
     let feature = if opts.no_wasi { "no-wasi" } else { "default" };

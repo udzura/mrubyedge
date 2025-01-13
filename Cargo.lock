@@ -467,6 +467,7 @@ version = "1.0.0-rc2"
 dependencies = [
  "criterion",
  "getrandom",
+ "mec-mrbc-sys",
  "plain",
  "simple_endian 0.3.2",
 ]

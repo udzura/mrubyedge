@@ -3,10 +3,14 @@ name: mruby/edge CI
 on:
   push:
     branches:
-      - main
+      - master
+    paths:
+      - 'mrubyedge/**'
   pull_request:
     branches:
-      - main
+      - master
+    paths:
+      - 'mrubyedge/**'
 
 jobs:
   build:

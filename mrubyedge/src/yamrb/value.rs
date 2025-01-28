@@ -204,6 +204,19 @@ impl TryFrom<&RObject> for f32 {
     }
 }
 
+impl TryFrom<&RObject> for bool {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::Bool(b) => Ok(*b),
+            RValue::Integer(i) => Ok(*i != 0),
+            RValue::Nil => Ok(false),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
 impl TryFrom<&RObject> for String {
     type Error = Error;
 

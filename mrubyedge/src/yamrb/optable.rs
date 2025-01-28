@@ -836,6 +836,7 @@ pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) {
     vm.current_regs_offset += a as usize;
 }
 
+#[allow(dead_code)]
 struct EnterArgInfo {
     m1: u32,
     o: u32,
@@ -871,7 +872,7 @@ pub(crate) fn op_enter(vm: &mut VM, operand: &Fetched) {
                 // no problem,
             },
             None => {
-                panic!("argument {} is not passed", i);
+                unreachable!("argument {} not passed", i + 1);
             }
         }
     }

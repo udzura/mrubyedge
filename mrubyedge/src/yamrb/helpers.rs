@@ -4,40 +4,43 @@ use crate::Error;
 
 use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym}, vm::VM};
 
+fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    push_callinfo(vm, RSym::new("block".to_string()), 0);
+
+    let old_callinfo = vm.current_callinfo.take();
+
+    vm.current_regs()[0].replace(recv);
+    for (i, arg) in args.iter().enumerate() {
+        vm.current_regs()[i + 1].replace(arg.clone());
+    }
+
+    vm.pc.set(0);
+    vm.current_irep = block.irep.as_ref().unwrap().clone();
+    let res = vm.run().unwrap();
+
+    if let Some(ci) = old_callinfo {
+        if ci.prev.is_some() {
+            vm.current_callinfo.replace(ci.prev.clone().unwrap());
+        }
+        vm.current_irep = ci.pc_irep.clone();
+        vm.pc.set(ci.pc);
+        vm.current_regs_offset = ci.current_regs_offset;
+        vm.target_class = ci.target_class.clone();
+    }
+
+    Ok(res.clone())
+}
+
 pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: &str, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let recv = match top_self {
+    let recv: Rc<RObject> = match top_self {
         Some(obj) => obj,
         None => vm.current_regs()[0].as_ref().unwrap().clone(),
     };
-    let binding = recv.get_class(vm);
-    let method = binding.find_method(name).expect("Method not found");
+    let binding = recv.as_ref().get_class(vm);
+    let method = binding.as_ref().find_method(name).expect("Method not found").clone();
     
     if method.is_rb_func {
-        push_callinfo(vm, RSym::new(name.to_string()), 0);
-
-        // let old_irep = vm.current_irep.clone();
-        let old_callinfo = vm.current_callinfo.take();
-
-        vm.current_regs()[0].replace(recv.clone());
-        for (i, arg) in args.iter().enumerate() {
-            vm.current_regs()[i + 1].replace(arg.clone());
-        }
-    
-        vm.pc.set(0);
-        vm.current_irep = method.irep.as_ref().unwrap().clone();
-        let res = vm.run().unwrap();
-
-        if let Some(ci) = old_callinfo {
-            if ci.prev.is_some() {
-                vm.current_callinfo.replace(ci.prev.clone().unwrap());
-            }
-            vm.current_irep = ci.pc_irep.clone();
-            vm.pc.set(ci.pc);
-            vm.current_regs_offset = ci.current_regs_offset;
-            vm.target_class = ci.target_class.clone();
-        }
- 
-        Ok(res.clone())
+        call_block(vm, method, recv.clone(), args)
     } else {
         vm.current_regs_offset += 2;
         vm.current_regs()[0].replace(recv.clone());

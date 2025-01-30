@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 extern crate mrubyedge;
 
+use core::mem::MaybeUninit;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::any::Any;
@@ -38,13 +39,41 @@ fn __imported_c_{{ fn.func_name }}(_vm: &mut mrubyedge::yamrb::vm::VM, args: &[R
 }
 {% endfor %}
 
+static mut MRUBY_VM: MaybeUninit<mrubyedge::yamrb::vm::VM> = MaybeUninit::uninit();
+static mut MRUBY_VM_LOADED: bool = false;
+
+#[allow(static_mut_refs)]
+unsafe fn assume_initialized_VM() -> &'static mut mrubyedge::yamrb::vm::VM {
+    if !MRUBY_VM_LOADED {
+        initVM();
+        MRUBY_VM_LOADED = true;
+    }
+    MRUBY_VM.assume_init_mut()
+}
+
+fn initVM() {
+    let mut rite = mrubyedge::rite::load(DATA).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+
+{% for ifn in ftypes_imports %}
+    let klass = vm.object_class.clone();
+    let method = Box::new(__imported_c_{{ ifn.func_name }});
+    mrubyedge::yamrb::helpers::mrb_define_cmethod(&mut vm, klass, "{{ ifn.func_name }}", method);
+{% endfor %}
+
+    vm.run().unwrap();
+
+    unsafe {
+        MRUBY_VM = core::mem::MaybeUninit::new(vm);
+    }
+}
+
 {% for fn in ftypes %}
 
 {{ fn.exported_helper_var }}
 #[no_mangle]
 pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
-    let mut rite = mrubyedge::rite::load(DATA).unwrap();
-    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    let mut vm = unsafe { assume_initialized_VM() };
 
 {% for ifn in ftypes_imports %}
     let klass = vm.object_class.clone();

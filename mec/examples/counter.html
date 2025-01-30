@@ -1,0 +1,25 @@
+<html>
+<!-- write a wasm example to use ./counter.wasm -->
+<head>
+    <title>WASM Example</title>
+</head>
+<body>
+    <h1>WASM Example</h1>
+    <script>
+        fetch('counter.wasm')
+            .then(response => response.arrayBuffer())
+            .then(bytes => WebAssembly.instantiate(bytes, {}))
+            .then(results => {
+                const instance = results.instance;
+                const exports = instance.exports;
+                exports.countup();
+                console.log("counter: ", exports.current_count());
+
+                setInterval(() => {
+                    exports.countup();
+                    console.log("counter: ", exports.current_count());
+                }, 1000);
+            });
+    </script>
+</body>
+</html>

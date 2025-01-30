@@ -32,7 +32,7 @@ pub enum RValue {
     Proc(RProc),
     Array(Vec<Rc<RObject>>),
     Hash(HashMap<String, Rc<RObject>>),
-    String(RefCell<String>),
+    String(RefCell<Vec<u8>>),
     Range(Rc<RObject>, Rc<RObject>, bool),
     Data,
     Nil,
@@ -83,7 +83,7 @@ impl RObject {
     pub fn string(s: String) -> Self {
         RObject {
             tt: RType::String,
-            value: RValue::String(RefCell::new(s)),
+            value: RValue::String(RefCell::new(s.into_bytes())),
         }
     }
 
@@ -133,7 +133,7 @@ impl RObject {
     // TODO: implment Object#hash
     pub fn as_hash_key(&self) -> String {
         match &self.value {
-            RValue::String(s) => format!("__String__{}", s.borrow().clone()),
+            RValue::String(s) => format!("__String__{}", String::from_utf8_lossy(&s.borrow())),
             RValue::Integer(i) => format!("__Integer__{}", *i),
             RValue::Symbol(s) => format!("__Symbol__{}", s.name),
             RValue::Bool(b) => format!("__Bool__{:?}", *b),
@@ -222,7 +222,7 @@ impl TryFrom<&RObject> for String {
 
     fn try_from(value: &RObject) -> Result<Self, Self::Error> {
         match &value.value {
-            RValue::String(s) => Ok(s.borrow().to_owned()),
+            RValue::String(s) => Ok(String::from_utf8_lossy(&s.borrow()).to_string()),
             v => Ok(format!("{:?}", v)),
         }
     }

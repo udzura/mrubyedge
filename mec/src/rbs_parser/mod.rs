@@ -20,6 +20,7 @@ impl FuncDef {
             .map(|(idx, arg)| match arg.as_str() {
                 "Integer" => format!("a{}: i32", idx),
                 "Float" => format!("a{}: f32", idx),
+                "bool" => format!("a{}: bool", idx),
                 "String" => format!("p{0}: *const u8, l{0}: usize", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
@@ -41,6 +42,7 @@ impl FuncDef {
             .map(|(idx, arg)| match arg.as_str() {
                 "Integer" => format!("std::rc::Rc::new(RObject::integer(a{} as i64))", idx),
                 "Float" => format!("std::rc::Rc::new(RObject::float(a{} as f64))", idx),
+                "bool" => format!("std::rc::Rc::new(RObject::boolean(a{}))", idx),
                 "String" => format!("std::rc::Rc::new(RObject::string(a{}.to_string()))", idx),
                 _ => {
                     unimplemented!("unsupported arg type")
@@ -83,6 +85,7 @@ let a{0} = unsafe {{
             "void" => "-> ()",
             "Integer" => "-> i32",
             "Float" => "-> f32",
+            "bool" => "-> bool",
             "String" => "-> *const u8",
             _ => {
                 unimplemented!("unsupported arg type")
@@ -219,6 +222,7 @@ unsafe {{
         let ret_mruby_type = match self.rettype.as_str() {
             "Integer" => "RObject::integer(r0 as i64)",
             "Float" => "RObject::float(r0 as f64)",
+            "bool" => "RObject::boolean(r0)",
             "String" => "RObject::string(s0)",
             "void" => "RObject::nil()",
             _ => unimplemented!("unsupported arg type"),

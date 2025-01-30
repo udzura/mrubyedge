@@ -1,0 +1,7 @@
+def shutdown: () -> void
+
+def logFunction: (Integer, String) -> void
+
+def getRandomInt: (Integer, Integer) -> Integer
+
+def test_bool: (bool) -> bool

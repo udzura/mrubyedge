@@ -3,6 +3,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 use crate::Error;
 
 use super::vm::{IREP, VM};
+use super::shared_memory::SharedMemory;
 
 #[derive(Debug, Clone, Copy)]
 pub enum RType {
@@ -17,6 +18,7 @@ pub enum RType {
     Hash,
     String,
     Range,
+    SharedMemory,
     Data,
     Nil,
 }
@@ -34,6 +36,7 @@ pub enum RValue {
     Hash(HashMap<String, Rc<RObject>>),
     String(RefCell<Vec<u8>>),
     Range(Rc<RObject>, Rc<RObject>, bool),
+    SharedMemory(Rc<RefCell<SharedMemory>>),
     Data,
     Nil,
 }
@@ -160,6 +163,7 @@ impl RObject {
             RValue::Hash(_) => vm.get_class_by_name("Hash"),
             RValue::String(_) => vm.get_class_by_name("String"),
             RValue::Range(_, _, _) => vm.get_class_by_name("Range"),
+            RValue::SharedMemory(_) => vm.get_class_by_name("SharedMemory"),
             RValue::Data => todo!("return ...? class"),
             RValue::Nil => vm.get_class_by_name("NilClass"),
         }

@@ -24,4 +24,8 @@ impl SharedMemory {
     pub fn read(&self, offset: usize, size: usize) -> Vec<u8> {
         self.memory[offset..offset + size].to_vec()
     }
+
+    pub fn read_u8(&self, offset: usize) -> u8 {
+        self.memory[offset]
+    }
 }

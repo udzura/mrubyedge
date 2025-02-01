@@ -253,6 +253,25 @@ impl TryFrom<&RObject> for u64 {
     }
 }
 
+impl TryFrom<&RObject> for usize {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as usize),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as usize),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
 impl TryFrom<&RObject> for f32 {
     type Error = Error;
 

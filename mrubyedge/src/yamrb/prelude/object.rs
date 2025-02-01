@@ -31,7 +31,7 @@ pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>
     let msg = args[0].clone();
     match &msg.value {
         RValue::String(s) => {
-            println!("{}", s.borrow());
+            println!("{}", String::from_utf8_lossy(&s.borrow()));
         }
         RValue::Integer(i) => {
             println!("{}", i);

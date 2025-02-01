@@ -1037,10 +1037,7 @@ fn do_op_array(vm: &mut VM, this: usize, start: usize, n: usize) {
             ary.push(vm.current_regs()[(start + i) as usize].clone().unwrap());
         }
     }
-    let val = RObject {
-        tt: super::value::RType::Array,
-        value: super::value::RValue::Array(ary),
-    };
+    let val = RObject::array(ary);
     vm.current_regs()[this].replace(Rc::new(val));
 }
 
@@ -1068,12 +1065,16 @@ pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
         (RValue::String(s1), RValue::String(s2)) => {
             let mut s1 = s1.borrow_mut();
             let s2 = s2.borrow();
-            s1.push_str(&s2);
+            for c in s2.iter() {
+                s1.push(*c);
+            }
         }
         (RValue::String(s1), RValue::Integer(s2)) => {
             let mut s1 = s1.borrow_mut();
             let s2 = s2.to_string();
-            s1.push_str(&s2);
+            for c in s2.as_bytes() {
+                s1.push(*c);
+            }
         }
         _ => {
             unreachable!("strcat supports only string")

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::Error;
 
-use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym}, vm::VM};
+use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym, RValue}, vm::VM};
 
 fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     push_callinfo(vm, RSym::new("block".to_string()), 0);
@@ -29,6 +29,19 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
     }
 
     Ok(res.clone())
+}
+
+pub fn mrb_call_block(vm: &mut VM, block: Rc<RObject>, recv: Option<Rc<RObject>>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let block = match &block.value {
+        RValue::Proc(p) => p.clone(),
+        _ => panic!("Not a block"),
+        
+    };
+    let recv = match recv {
+        Some(r) => r,
+        None => block.block_self.clone().unwrap(),
+    };
+    call_block(vm, block, recv, args)
 }
 
 pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: &str, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -67,6 +80,7 @@ pub fn mrb_define_cmethod(vm: &mut VM, klass: Rc<RClass>, name: &str, cmethod: R
         next: None,
         irep: None,
         func: Some(index),
+        block_self: None,
     };
     let mut procs = klass.procs.borrow_mut();
     procs.insert(name.to_string(), method);

@@ -403,7 +403,7 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         }
         BLOCK => {
             // op_block(vm, &operand);
-            op_lambda(vm, &operand);
+            op_block(vm, &operand);
         }
         METHOD => {
             op_method(vm, &operand);
@@ -1171,6 +1171,24 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
             sym_id: Some("<lambda>".into()),
             next: None,
             func: None,
+            block_self: Some(vm.getself()),
+        }),
+    };
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let irep = Some(vm.current_irep.reps[b as usize].clone());
+    let val = RObject {
+        tt: RType::Proc,
+        value: RValue::Proc(RProc {
+            irep,
+            is_rb_func: true,
+            sym_id: Some("<lambda>".into()),
+            next: None,
+            func: None,
+            block_self: Some(vm.getself()),
         }),
     };
     vm.current_regs()[a as usize].replace(Rc::new(val));
@@ -1187,6 +1205,7 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
             sym_id: None,
             next: None,
             func: None,
+            block_self: None,
         }),
     };
     vm.current_regs()[a as usize].replace(Rc::new(val));

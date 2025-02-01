@@ -7,6 +7,7 @@ pub(crate) fn initialize_array(vm: &mut VM) {
 
     mrb_define_cmethod(vm, array_class.clone(), "push", Box::new(mrb_array_push_self));
     mrb_define_cmethod(vm, array_class.clone(), "[]", Box::new(mrb_array_get_index_self));
+    mrb_define_cmethod(vm, array_class.clone(), "[]=", Box::new(mrb_array_set_index_self));
 }
 
 fn mrb_array_push_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -46,6 +47,26 @@ pub fn mrb_array_get_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc
     Ok(value)
 }
 
+fn mrb_array_set_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself();
+    mrb_array_set_index(this, args)
+}
+
+pub fn mrb_array_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let index: usize = args[0].as_ref().try_into()?;
+    let value = &args[1];
+    match &this.value {
+        RValue::Array(a) => {
+            let mut a = a.borrow_mut();
+            a.insert(index, value.clone());
+        }
+        _ => {
+            return Err(Error::RuntimeError("Array#push must be called on an Array".to_string()));
+        }
+    };
+    Ok(value.clone())
+}
+
 #[test]
 fn test_mrb_array_push_and_index() {
     use crate::yamrb::*;
@@ -72,4 +93,32 @@ fn test_mrb_array_push_and_index() {
         let value: i64 = value.as_ref().try_into().expect("value is not integer");
         assert_eq!(value, *expected);
     }
+}
+
+#[test]
+fn test_mrb_array_set_and_index() {
+    use crate::yamrb::*;
+    let mut vm = VM::empty();
+    prelude::prelude(&mut vm);
+
+    let array = Rc::new(RObject::array(vec![]));
+    let args = vec![
+        Rc::new(RObject::nil()),
+        Rc::new(RObject::nil()),
+        Rc::new(RObject::integer(0)),
+    ];
+    mrb_array_push(array.clone(), &args).expect("push failed");
+
+    let upd_index = Rc::new(RObject::integer(2));
+    let newval = Rc::new(RObject::integer(42));
+    let args = vec![
+        upd_index,
+        newval,
+    ];
+
+    mrb_array_set_index(array.clone(), &args).expect("set index failed");
+
+    let value = mrb_array_get_index(array.clone(), &args).expect("getting index failed");
+    let value: i64 = value.as_ref().try_into().expect("value is not integer");
+    assert_eq!(value, 42);
 }

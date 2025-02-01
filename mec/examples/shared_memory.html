@@ -1,0 +1,23 @@
+<html>
+<!-- write a wasm example to use ./counter.wasm -->
+<head>
+    <title>WASM Example</title>
+</head>
+<body>
+    <h1>WASM Example</h1>
+    <script>
+        fetch('./shared_memory.wasm')
+            .then(response => response.arrayBuffer())
+            .then(bytes => WebAssembly.instantiate(bytes, {}))
+            .then(({instance: {exports}}) => {
+                const offset = exports.get_memory();
+                const memory = new Uint8Array(exports.memory.buffer, offset, 4);
+                memory[0] = 125;
+                memory[1] = 100;
+                memory[2] = 50;
+                memory[3] = 25;
+                console.log("result: ", exports.read_array_from_memory());
+            });
+    </script>
+</body>
+</html>

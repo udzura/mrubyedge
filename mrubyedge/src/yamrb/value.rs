@@ -3,6 +3,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 use crate::Error;
 
 use super::vm::{IREP, VM};
+use super::shared_memory::SharedMemory;
 
 #[derive(Debug, Clone, Copy)]
 pub enum RType {
@@ -17,6 +18,7 @@ pub enum RType {
     Hash,
     String,
     Range,
+    SharedMemory,
     Data,
     Nil,
 }
@@ -30,10 +32,11 @@ pub enum RValue {
     Class(Rc<RClass>),
     Instance(RInstance),
     Proc(RProc),
-    Array(Vec<Rc<RObject>>),
+    Array(RefCell<Vec<Rc<RObject>>>),
     Hash(HashMap<String, Rc<RObject>>),
-    String(RefCell<String>),
+    String(RefCell<Vec<u8>>),
     Range(Rc<RObject>, Rc<RObject>, bool),
+    SharedMemory(Rc<RefCell<SharedMemory>>),
     Data,
     Nil,
 }
@@ -83,14 +86,21 @@ impl RObject {
     pub fn string(s: String) -> Self {
         RObject {
             tt: RType::String,
-            value: RValue::String(RefCell::new(s)),
+            value: RValue::String(RefCell::new(s.into_bytes())),
+        }
+    }
+
+    pub fn string_from_vec(v: Vec<u8>) -> Self {
+        RObject {
+            tt: RType::String,
+            value: RValue::String(RefCell::new(v)),
         }
     }
 
     pub fn array(v: Vec<Rc<RObject>>) -> Self {
         RObject {
             tt: RType::Array,
-            value: RValue::Array(v),
+            value: RValue::Array(RefCell::new(v)),
         }
     }
 
@@ -133,7 +143,7 @@ impl RObject {
     // TODO: implment Object#hash
     pub fn as_hash_key(&self) -> String {
         match &self.value {
-            RValue::String(s) => format!("__String__{}", s.borrow().clone()),
+            RValue::String(s) => format!("__String__{}", String::from_utf8_lossy(&s.borrow())),
             RValue::Integer(i) => format!("__Integer__{}", *i),
             RValue::Symbol(s) => format!("__Symbol__{}", s.name),
             RValue::Bool(b) => format!("__Bool__{:?}", *b),
@@ -160,6 +170,7 @@ impl RObject {
             RValue::Hash(_) => vm.get_class_by_name("Hash"),
             RValue::String(_) => vm.get_class_by_name("String"),
             RValue::Range(_, _, _) => vm.get_class_by_name("Range"),
+            RValue::SharedMemory(_) => vm.get_class_by_name("SharedMemory"),
             RValue::Data => todo!("return ...? class"),
             RValue::Nil => vm.get_class_by_name("NilClass"),
         }
@@ -180,6 +191,82 @@ impl TryFrom<&RObject> for i32 {
                 }
             }
             RValue::Float(f) => return Ok(f as i32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for u32 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as u32),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as u32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for i64 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as i64),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for u64 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as u64),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as u64),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for usize {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as usize),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as usize),
             _ => Err(Error::TypeMismatch),
         }
     }
@@ -222,8 +309,19 @@ impl TryFrom<&RObject> for String {
 
     fn try_from(value: &RObject) -> Result<Self, Self::Error> {
         match &value.value {
-            RValue::String(s) => Ok(s.borrow().to_owned()),
+            RValue::String(s) => Ok(String::from_utf8_lossy(&s.borrow()).to_string()),
             v => Ok(format!("{:?}", v)),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for Vec<u8> {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::String(s) => Ok(s.borrow().clone()),
+            _ => Err(Error::TypeMismatch),
         }
     }
 }
@@ -233,6 +331,17 @@ impl TryFrom<&RObject> for () {
 
     fn try_from(_: &RObject) -> Result<Self, Self::Error> {
         Ok(())
+    }
+}
+
+impl TryFrom<&RObject> for *mut u8 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::SharedMemory(sm) => Ok(sm.borrow_mut().as_mut_ptr()),
+            _ => Err(Error::TypeMismatch),
+        }
     }
 }
 

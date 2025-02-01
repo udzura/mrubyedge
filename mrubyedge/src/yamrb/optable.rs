@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use crate::rite::insn::{Fetched, OpCode};
 
-use super::{value::*, vm::*};
+use super::{helpers::mrb_funcall, value::*, vm::*};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
 // OPCODE(NOP,        Z)        /* no operation */
@@ -237,12 +237,12 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         SETUPVAR => {
             op_setupvar(vm, &operand);
         }
-        // GETIDX => {
-        //     // op_getidx(vm, &operand);
-        // }
-        // SETIDX => {
-        //     // op_setidx(vm, &operand);
-        // }
+        GETIDX => {
+            op_getidx(vm, &operand);
+        }
+        SETIDX => {
+            op_setidx(vm, &operand);
+        }
         JMP => {
             op_jmp(vm, &operand, pos + len);
         }
@@ -659,6 +659,25 @@ pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
     up_regs[b as usize].replace(val);
 }
 
+pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let recv = vm.current_regs()[a].as_ref().cloned().unwrap();
+    let idx = vm.current_regs()[a + 1].as_ref().cloned().unwrap();
+    let args = vec![idx];
+    // TODO: direct call of array_index for performance
+    let val = mrb_funcall(vm, Some(recv), "[]", &args).expect("calling index failed");
+    vm.current_regs()[a].replace(val);
+}
+
+pub(crate) fn op_setidx(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let recv = vm.current_regs()[a].as_ref().cloned().unwrap();
+    let idx = vm.current_regs()[a + 1].as_ref().cloned().unwrap();
+    let val = vm.current_regs()[a + 2].as_ref().cloned().unwrap();
+    let args = vec![idx, val];
+    mrb_funcall(vm, Some(recv), "[]=", &args).expect("calling index failed");
+}
+
 pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched, end_pos: usize) {
     let a = operand.as_s().unwrap();
     let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + a as usize);
@@ -1037,10 +1056,7 @@ fn do_op_array(vm: &mut VM, this: usize, start: usize, n: usize) {
             ary.push(vm.current_regs()[(start + i) as usize].clone().unwrap());
         }
     }
-    let val = RObject {
-        tt: super::value::RType::Array,
-        value: super::value::RValue::Array(ary),
-    };
+    let val = RObject::array(ary);
     vm.current_regs()[this].replace(Rc::new(val));
 }
 
@@ -1068,12 +1084,16 @@ pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
         (RValue::String(s1), RValue::String(s2)) => {
             let mut s1 = s1.borrow_mut();
             let s2 = s2.borrow();
-            s1.push_str(&s2);
+            for c in s2.iter() {
+                s1.push(*c);
+            }
         }
         (RValue::String(s1), RValue::Integer(s2)) => {
             let mut s1 = s1.borrow_mut();
             let s2 = s2.to_string();
-            s1.push_str(&s2);
+            for c in s2.as_bytes() {
+                s1.push(*c);
+            }
         }
         _ => {
             unreachable!("strcat supports only string")

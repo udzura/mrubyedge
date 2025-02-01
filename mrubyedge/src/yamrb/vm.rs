@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::rite::{insn, Irep, Rite};
 
-use super::optable::*;
+use super::{op, optable::*};
 use super::prelude::prelude;
 use super::value::*;
 use super::op::Op;
@@ -46,6 +46,21 @@ impl VM {
         let irep = rite_to_irep(rite);
         let vm = VM::new_by_raw_irep(irep);
         vm
+    }
+
+    pub fn empty() -> VM {
+        let irep = IREP {
+            nlocals: 0,
+            nregs: 0,
+            rlen: 0,
+            code: vec![
+                op::Op { code: insn::OpCode::STOP, operand: insn::Fetched::Z, pos: 18, len: 1 },
+            ],
+            syms: Vec::new(),
+            pool: Vec::new(),
+            reps: Vec::new(),
+        };
+        Self::new_by_raw_irep(irep)
     }
 
     pub fn new_by_raw_irep(irep: IREP) -> VM {

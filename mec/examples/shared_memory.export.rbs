@@ -1,0 +1,3 @@
+def get_memory: () -> SharedMemory
+
+def read_array_from_memory: () -> Integer

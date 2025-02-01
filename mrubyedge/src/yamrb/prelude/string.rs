@@ -83,3 +83,40 @@ fn mrb_string_unpack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, E
 
     Ok(result)
 }
+
+#[test]
+fn test_mrb_string_unpack() {
+    use crate::yamrb::*;
+
+    let mut vm = VM::empty();
+    prelude::prelude(&mut vm);
+
+    let data = Rc::new(RObject::string_from_vec(
+        vec![
+            0x01,
+            0x02, 0x03,
+            0x04, 0x05, 0x06, 0x07,
+            0x04, 0x04, 0x03, 0x03, 0x02, 0x02, 0x00, 0x00,
+        ],
+    ));
+    let format = Rc::new(RObject::string(
+        "c s l q".to_string(),
+    ));
+    let arg = vec![format];
+
+    let ret = helpers::mrb_funcall(&mut vm, Some(data), "unpack", &arg).expect("unpack failed");
+    
+    let answers = vec![
+        0x01,
+        0x02 | 0x03 << 8,
+        0x04 | 0x05 << 8 | 0x06 << 16 | 0x07 << 24,
+        0x04 | 0x04 << 8 | 0x03 << 16 | 0x03 << 24 | 0x02 << 32 | 0x02 << 40 | 0x00 << 48 | 0x00 << 56,
+    ];
+
+    for (i, expected) in answers.iter().enumerate() {
+        let args = vec![Rc::new(RObject::integer(i as i64))];
+        let value = prelude::array::mrb_array_get_index(ret.clone(), &args).expect("getting index failed");
+        let value: i64 = value.as_ref().try_into().expect("value is not integer");
+        assert_eq!(value, *expected);
+    }
+}

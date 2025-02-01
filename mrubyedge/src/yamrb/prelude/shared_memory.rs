@@ -8,13 +8,9 @@ use crate::{yamrb::{helpers::mrb_define_cmethod, value::{RObject, RValue, RType}
 pub(crate) fn initialize_shared_memory(vm: &mut VM) {
     let shared_memory_class = vm.define_standard_class("SharedMemory");
 
-    let mrb_shared_memory_to_string = 
-        Box::new(mrb_shared_memory_to_string);
-    mrb_define_cmethod(vm, shared_memory_class.clone(), "to_s", mrb_shared_memory_to_string);
-    let mrb_shared_memory_index_range = 
-        Box::new(mrb_shared_memory_index_range);
-    mrb_define_cmethod(vm, shared_memory_class.clone(), "[]", mrb_shared_memory_index_range);
-
+    mrb_define_cmethod(vm, shared_memory_class.clone(), "to_s", Box::new(mrb_shared_memory_to_string));
+    mrb_define_cmethod(vm, shared_memory_class.clone(), "[]", Box::new(mrb_shared_memory_index_range));
+    mrb_define_cmethod(vm, shared_memory_class.clone(), "[]=", Box::new(mrb_shared_memory_set_index_range));
     mrb_define_cmethod(vm, shared_memory_class.clone(), "read_by_size", Box::new(mrb_shared_memory_read_by_size));
 }
 
@@ -27,6 +23,37 @@ pub fn mrb_shared_memory_new(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RO
         ))),
     });
     Ok(obj)
+}
+
+fn mrb_shared_memory_set_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself();
+    let (start, end) = match &args[0].as_ref().value {
+        RValue::Range(start, end, exclusive) => {
+            let start: u64 = start.as_ref().try_into()?;
+            let end: u64 = end.as_ref().try_into()?;
+            if *exclusive {
+                (start, end-1)
+            } else {
+                (start, end)
+            }
+        }
+        _ => {
+            return Err(Error::RuntimeError("Range should be passed on SharedMemory#[]=".to_string()));
+        }
+    };
+    let sm = match &this.value {
+        RValue::SharedMemory(s) => s,
+        _ => {
+            return Err(Error::RuntimeError("SharedMemory#to_s must be called on a SharedMemory".to_string()));
+        }
+    };
+    let data: Vec<u8> = args[1].as_ref().try_into()?;
+    if data.len() != (end - start + 1) as usize {
+        return Err(Error::RuntimeError("Data length must be equal to range length".to_string()));
+    }
+    let mut sm = sm.borrow_mut();
+    sm.write(start as usize, &data);
+    Ok(this.clone())
 }
 
 fn mrb_shared_memory_to_string(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {

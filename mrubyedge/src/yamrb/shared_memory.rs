@@ -13,7 +13,7 @@ impl SharedMemory {
         SharedMemory { memory, size }
     }
 
-    pub fn as_ptr(&mut self) -> *mut u8 {
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.memory.as_mut_ptr()
     }
 

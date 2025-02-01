@@ -87,6 +87,7 @@ let a{0} = unsafe {{
             "Float" => "-> f32",
             "bool" => "-> bool",
             "String" => "-> *const u8",
+            "SharedMemory" => "-> *mut u8",
             _ => {
                 unimplemented!("unsupported arg type")
             }

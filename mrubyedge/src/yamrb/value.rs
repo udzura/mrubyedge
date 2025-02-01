@@ -315,6 +315,17 @@ impl TryFrom<&RObject> for () {
     }
 }
 
+impl TryFrom<&RObject> for *mut u8 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::SharedMemory(sm) => Ok(sm.borrow_mut().as_mut_ptr()),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RClass {
     pub sym_id: RSym,

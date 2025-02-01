@@ -1037,10 +1037,7 @@ fn do_op_array(vm: &mut VM, this: usize, start: usize, n: usize) {
             ary.push(vm.current_regs()[(start + i) as usize].clone().unwrap());
         }
     }
-    let val = RObject {
-        tt: super::value::RType::Array,
-        value: super::value::RValue::Array(ary),
-    };
+    let val = RObject::array(ary);
     vm.current_regs()[this].replace(Rc::new(val));
 }
 

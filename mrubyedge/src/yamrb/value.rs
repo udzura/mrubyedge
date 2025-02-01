@@ -32,7 +32,7 @@ pub enum RValue {
     Class(Rc<RClass>),
     Instance(RInstance),
     Proc(RProc),
-    Array(Vec<Rc<RObject>>),
+    Array(RefCell<Vec<Rc<RObject>>>),
     Hash(HashMap<String, Rc<RObject>>),
     String(RefCell<Vec<u8>>),
     Range(Rc<RObject>, Rc<RObject>, bool),
@@ -90,10 +90,17 @@ impl RObject {
         }
     }
 
+    pub fn string_from_vec(v: Vec<u8>) -> Self {
+        RObject {
+            tt: RType::String,
+            value: RValue::String(RefCell::new(v)),
+        }
+    }
+
     pub fn array(v: Vec<Rc<RObject>>) -> Self {
         RObject {
             tt: RType::Array,
-            value: RValue::Array(v),
+            value: RValue::Array(RefCell::new(v)),
         }
     }
 
@@ -189,6 +196,63 @@ impl TryFrom<&RObject> for i32 {
     }
 }
 
+impl TryFrom<&RObject> for u32 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as u32),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as u32),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for i64 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as i64),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for u64 {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match value.value {
+            RValue::Integer(i) => Ok(i as u64),
+            RValue::Bool(b) => {
+                if b {
+                    Ok(1)
+                } else {
+                    Ok(0)
+                }
+            }
+            RValue::Float(f) => return Ok(f as u64),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
 impl TryFrom<&RObject> for f32 {
     type Error = Error;
 
@@ -228,6 +292,17 @@ impl TryFrom<&RObject> for String {
         match &value.value {
             RValue::String(s) => Ok(String::from_utf8_lossy(&s.borrow()).to_string()),
             v => Ok(format!("{:?}", v)),
+        }
+    }
+}
+
+impl TryFrom<&RObject> for Vec<u8> {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::String(s) => Ok(s.borrow().clone()),
+            _ => Err(Error::TypeMismatch),
         }
     }
 }

@@ -8,9 +8,6 @@ use crate::{yamrb::{helpers::mrb_define_cmethod, value::{RObject, RValue, RType}
 pub(crate) fn initialize_shared_memory(vm: &mut VM) {
     let shared_memory_class = vm.define_standard_class("SharedMemory");
 
-    let mrb_shared_memory_new = 
-        Box::new(mrb_shared_memory_new);
-    mrb_define_cmethod(vm, shared_memory_class.clone(), "new", mrb_shared_memory_new);
     let mrb_shared_memory_to_string = 
         Box::new(mrb_shared_memory_to_string);
     mrb_define_cmethod(vm, shared_memory_class.clone(), "to_s", mrb_shared_memory_to_string);
@@ -19,7 +16,7 @@ pub(crate) fn initialize_shared_memory(vm: &mut VM) {
     mrb_define_cmethod(vm, shared_memory_class.clone(), "[]", mrb_shared_memory_index_range);
 }
 
-fn mrb_shared_memory_new(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+pub fn mrb_shared_memory_new(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let size: u64 = args[0].as_ref().try_into().expect("arg[0] must be integer");
     let obj = Rc::new(RObject {
         tt: RType::SharedMemory,
@@ -61,7 +58,7 @@ fn mrb_shared_memory_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc
     let sm = match &this.value {
         RValue::SharedMemory(s) => s,
         _ => {
-            return Err(Error::RuntimeError("SharedMemory#to_s must be called on a SharedMemory".to_string()));
+            return Err(Error::RuntimeError("this value's not a SharedMemory".to_string()));
         }
     };
     let range = sm.borrow().memory.as_ref()[(start as usize)..=(end as usize)].to_vec();

@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use crate::rite::insn::{Fetched, OpCode};
 
-use super::{value::*, vm::*};
+use super::{helpers::mrb_funcall, value::*, vm::*};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
 // OPCODE(NOP,        Z)        /* no operation */
@@ -237,12 +237,12 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         SETUPVAR => {
             op_setupvar(vm, &operand);
         }
-        // GETIDX => {
-        //     // op_getidx(vm, &operand);
-        // }
-        // SETIDX => {
-        //     // op_setidx(vm, &operand);
-        // }
+        GETIDX => {
+            op_getidx(vm, &operand);
+        }
+        SETIDX => {
+            op_setidx(vm, &operand);
+        }
         JMP => {
             op_jmp(vm, &operand, pos + len);
         }
@@ -657,6 +657,25 @@ pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     let up_regs = &mut vm.regs[callinfo.current_regs_offset..];
     up_regs[b as usize].replace(val);
+}
+
+pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let recv = vm.current_regs()[a].as_ref().cloned().unwrap();
+    let idx = vm.current_regs()[a + 1].as_ref().cloned().unwrap();
+    let args = vec![idx];
+    // TODO: direct call of array_index for performance
+    let val = mrb_funcall(vm, Some(recv), "[]", &args).expect("calling index failed");
+    vm.current_regs()[a].replace(val);
+}
+
+pub(crate) fn op_setidx(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_b().unwrap() as usize;
+    let recv = vm.current_regs()[a].as_ref().cloned().unwrap();
+    let idx = vm.current_regs()[a + 1].as_ref().cloned().unwrap();
+    let val = vm.current_regs()[a + 2].as_ref().cloned().unwrap();
+    let args = vec![idx, val];
+    mrb_funcall(vm, Some(recv), "[]=", &args).expect("calling index failed");
 }
 
 pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched, end_pos: usize) {

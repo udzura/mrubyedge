@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{yamrb::{helpers::mrb_define_cmethod, value::{RObject, RValue}, vm::VM}, Error};
+use crate::{yamrb::{helpers::{mrb_call_block, mrb_define_cmethod}, value::{RObject, RValue}, vm::VM}, Error};
 
 pub(crate) fn initialize_array(vm: &mut VM) {
     let array_class = vm.define_standard_class("Array");
@@ -8,6 +8,7 @@ pub(crate) fn initialize_array(vm: &mut VM) {
     mrb_define_cmethod(vm, array_class.clone(), "push", Box::new(mrb_array_push_self));
     mrb_define_cmethod(vm, array_class.clone(), "[]", Box::new(mrb_array_get_index_self));
     mrb_define_cmethod(vm, array_class.clone(), "[]=", Box::new(mrb_array_set_index_self));
+    mrb_define_cmethod(vm, array_class.clone(), "each", Box::new(mrb_array_each));
     mrb_define_cmethod(vm, array_class.clone(), "pack", Box::new(mrb_array_pack));
 }
 
@@ -66,6 +67,24 @@ pub fn mrb_array_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc
         }
     };
     Ok(value.clone())
+}
+
+fn mrb_array_each(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself();
+    let block = &args[0];
+    match &this.value {
+        RValue::Array(a) => {
+            let a = a.borrow();
+            for elem in a.iter() {
+                let args = vec![elem.clone()];
+                mrb_call_block(vm, block.clone(), None, &args)?;
+            }
+        }
+        _ => {
+            return Err(Error::RuntimeError("Array#each must be called on an Array".to_string()));
+        }
+    };
+    Ok(this.clone())
 }
 
 fn mrb_array_pack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {

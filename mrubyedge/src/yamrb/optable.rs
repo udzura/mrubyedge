@@ -129,6 +129,14 @@ use super::{helpers::mrb_funcall, value::*, vm::*};
 // }
 //
 
+const ENTER_M1_MASK: u32 = 0b11111 << 18;
+const ENTER_O_MASK: u32 = 0b11111 << 13;
+const ENTER_R_MASK: u32 = 0b1 << 12;
+const ENTER_M2_MASK: u32 = 0b11111 << 7;
+const ENTER_K_MASK: u32 = 0b11111 << 2;
+const ENTER_D_MASK: u32 = 0b1 << 1;
+const ENTER_B_MASK: u32 = 0b1 << 0;
+
 pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: usize, len: usize) {
     use crate::rite::insn::OpCode::*;
     match code {
@@ -395,7 +403,7 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         }
         BLOCK => {
             // op_block(vm, &operand);
-            op_lambda(vm, &operand);
+            op_block(vm, &operand);
         }
         METHOD => {
             op_method(vm, &operand);
@@ -828,9 +836,46 @@ pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) {
     vm.current_regs_offset += a as usize;
 }
 
-pub(crate) fn op_enter(_vm: &mut VM, operand: &Fetched) {
-    let _a = operand.as_w().unwrap();
-    // TODO: not yet used this insn
+#[allow(dead_code)]
+struct EnterArgInfo {
+    m1: u32,
+    o: u32,
+    r: u32,
+    m2: u32,
+    k: u32,
+    d: u32,
+    b: u32,
+}
+
+impl From<u32> for EnterArgInfo {
+    fn from(val: u32) -> Self {
+        EnterArgInfo {
+            m1: (val & ENTER_M1_MASK) >> 18,
+            o: (val & ENTER_O_MASK) >> 13,
+            r: (val & ENTER_R_MASK) >> 12,
+            m2: (val & ENTER_M2_MASK) >> 7,
+            k: (val & ENTER_K_MASK) >> 2,
+            d: (val & ENTER_D_MASK) >> 1,
+            b: (val & ENTER_B_MASK) >> 0,
+        }
+    }
+}
+
+pub(crate) fn op_enter(vm: &mut VM, operand: &Fetched) {
+    let a = operand.as_w().unwrap();
+    let arg_info = EnterArgInfo::from(a);
+    // TODO: only check use of m1
+    let m1_argc = arg_info.m1 as usize;
+    for i in 0..m1_argc {
+        match vm.current_regs()[i + 1].as_ref() {
+            Some(_) => {
+                // no problem,
+            },
+            None => {
+                unreachable!("argument {} not passed", i + 1);
+            }
+        }
+    }
 }
 
 pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
@@ -1126,6 +1171,24 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
             sym_id: Some("<lambda>".into()),
             next: None,
             func: None,
+            block_self: Some(vm.getself()),
+        }),
+    };
+    vm.current_regs()[a as usize].replace(Rc::new(val));
+}
+
+pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
+    let (a, b) = operand.as_bb().unwrap();
+    let irep = Some(vm.current_irep.reps[b as usize].clone());
+    let val = RObject {
+        tt: RType::Proc,
+        value: RValue::Proc(RProc {
+            irep,
+            is_rb_func: true,
+            sym_id: Some("<lambda>".into()),
+            next: None,
+            func: None,
+            block_self: Some(vm.getself()),
         }),
     };
     vm.current_regs()[a as usize].replace(Rc::new(val));
@@ -1142,6 +1205,7 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
             sym_id: None,
             next: None,
             func: None,
+            block_self: None,
         }),
     };
     vm.current_regs()[a as usize].replace(Rc::new(val));

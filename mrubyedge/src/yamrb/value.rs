@@ -407,7 +407,9 @@ pub struct RProc {
     pub sym_id: Option<RSym>,
     pub next: Option<Rc<RProc>>,
     pub irep: Option<Rc<IREP>>,
-    pub func: Option<usize>,}
+    pub func: Option<usize>,
+    pub block_self: Option<Rc<RObject>>,
+}
 
 pub type RFn = Box<dyn Fn(&mut VM, &[Rc<RObject>]) -> Result<Rc<RObject>, Error>>;
 

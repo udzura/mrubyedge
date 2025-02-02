@@ -105,7 +105,8 @@ def receiveGameParams(offset)
 end
   
 def tick(offset)
-  logFunction(LOGLEVEL_INFO, "received tick with offset: #{offset}")
+  # setup(4096)
+
   logFunction(LOGLEVEL_INFO, "countup: #{$countup}")
   param_pre = $memory[offset..(offset+8)].unpack("I C S S")
   logFunction(LOGLEVEL_INFO, "last_tick_duration: #{param_pre[0]}")
@@ -113,24 +114,17 @@ def tick(offset)
   logFunction(LOGLEVEL_INFO, "hit_points: #{param_pre[2]}")
 
   surroundings_len = param_pre[3]
-  logFunction(LOGLEVEL_INFO, "surroundings_len: #{surroundings_len}")
-  $surroundings = []
-  $cursor = 9
+  # $surroundings = []
   $offset = offset
-  #surroundings_len.times do |i|
-  #  logFunction(LOGLEVEL_INFO, "Integer#times: #{i}")
-  #end
 
-  #surroundings_len.times do |i|
-  #  logFunction(LOGLEVEL_INFO, "getting offset: #{$cursor}")
-  #  logFunction(LOGLEVEL_INFO, "getting offset: #{$offset}")
-  #  tile = $memory[($offset+$cursor)..($offset+$cursor)].unpack("C")
-  #  logFunction(LOGLEVEL_INFO, "got tile: #{tile}")
-  #  $cursor += 1
-  #  $surroundings.push tile
-  #end
-  #surroundings_radius = $memory[(offset+9+surroundings_len)..(offset+9+surroundings_len)].unpack("C")
-  #logFunction(LOGLEVEL_INFO, "surroundings_radius: #{surroundings_radius}")
+  surroundings_len.times do |i|
+    ptr = $offset + 9 + i
+    tile = $memory[ptr..ptr].unpack("C")
+    logFunction(LOGLEVEL_INFO, "got tile: #{tile[0]}")
+    # $surroundings.push tile
+  end
+  # surroundings_radius = $memory[(offset+9+surroundings_len)..(offset+9+surroundings_len)].unpack("C")
+  # logFunction(LOGLEVEL_INFO, "surroundings_radius: #{surroundings_radius[0]}")
 
   if $countup < 32
     # wait message
@@ -154,3 +148,7 @@ def tick(offset)
     $memory[0..0] = [MESSAGE_TYPE_RESIGN].pack("C")
   end
 end
+
+#def logFunction(level, message)
+#  puts "[#{level}]: #{message}"
+#end

@@ -5,18 +5,36 @@ use crate::Error;
 use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym, RValue}, vm::VM};
 
 fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    push_callinfo(vm, RSym::new("block".to_string()), 0);
+    push_callinfo(vm, RSym::new("block".to_string()), args.len());
 
     let old_callinfo = vm.current_callinfo.take();
 
-    vm.current_regs()[0].replace(recv);
+    // Since call_block does not move the registers offset,
+    // keep the state before the call.
+    let prev_self = vm.current_regs()[0].replace(recv);
+
+    let mut prev_args = vec![];
     for (i, arg) in args.iter().enumerate() {
-        vm.current_regs()[i + 1].replace(arg.clone());
+        let old = vm.current_regs()[i + 1].replace(arg.clone());
+        prev_args.push(old);
     }
 
     vm.pc.set(0);
     vm.current_irep = block.irep.as_ref().unwrap().clone();
     let res = vm.run().unwrap();
+
+    if let Some(prev) = prev_self {
+        vm.current_regs()[0].replace(prev);
+    } else {
+        vm.current_regs()[0].take();
+    }
+    for (i, prev_arg) in prev_args.into_iter().enumerate() {
+        if let Some(prev) = prev_arg {
+            vm.current_regs()[i + 1].replace(prev);
+        } else {
+            vm.current_regs()[i + 1].take();
+        }
+    }
 
     if let Some(ci) = old_callinfo {
         if ci.prev.is_some() {

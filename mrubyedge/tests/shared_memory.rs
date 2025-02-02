@@ -64,7 +64,7 @@ def read_array_from_memory
   result = $memory[0...4].unpack('c c c c')
   result[0] + result[1] + result[2] + result[3]
 end";
-    let binary = mrbc_compile("shared_memory_2", code);
+    let binary = mrbc_compile("shared_memory_write", code);
     let mut rite = mrubyedge::rite::load(&binary).unwrap();
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
     vm.run().unwrap();

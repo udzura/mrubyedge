@@ -108,6 +108,7 @@ fn mrb_shared_memory_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc
     Ok(Rc::new(RObject::string_from_vec(range)))
 }
 
+// SharedMemory#read_by_size(size: Integer, offset: Integer) -> Integer
 fn mrb_shared_memory_read_by_size(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let this = vm.getself();
     let size: usize = args[0].as_ref().try_into()?;

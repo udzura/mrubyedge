@@ -50,6 +50,31 @@ fn times_self_test() {
 }
 
 #[test]
+fn times_self_2_test() {
+    let code = "
+    def test_times
+      3.times do |i|
+        puts \"i: #{i}\"
+      end
+
+      3.times do |j|
+        puts \"j: #{j}\"
+      end
+    end
+    ";
+    let binary = mrbc_compile("times_self_2", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    mrb_funcall(&mut vm, None, "test_times", &args)
+        .unwrap();
+    assert!(true);
+}
+
+#[test]
 fn range_each_test() {
     let code = "
     def test_each

@@ -491,7 +491,7 @@ fn calcurate_pc(irep: &IREP, pc: usize, original_pc: usize) -> usize {
 
 pub(crate) fn op_nop(_vm: &mut VM, _operand: &Fetched) {
     // NOOP
-    dbg!("nop");
+    // eprintln!("[debug] nop");
 }
 
 pub(crate) fn op_loadi_n(vm: &mut VM, n: i32, operand: &Fetched) {
@@ -760,23 +760,28 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
 
     let method_id = vm.current_irep.syms[b as usize].clone();
     let klass = recv.get_class(vm);
-    let method = klass.find_method(&method_id.name).expect("method not found. TODO: medthod_missing");
+    let method = klass.find_method(&method_id.name).expect(
+        &format!("method {} not found. TODO: medthod_missing", &method_id.name),
+    );
     if !method.is_rb_func {
         let func = vm.get_fn(method.func.unwrap()).unwrap();
         vm.current_regs_offset += a as usize;
+
         let res = func(vm, &args);
+
         vm.current_regs_offset -= a as usize;
         for i in (a as usize + 1)..block_index {
             vm.current_regs()[i].take();
         }
  
         if res.is_err() {
-            dbg!(&res);
+            eprintln!("[TODO] error handling: {:?}", &res);
             vm.error_code = 255;
             vm.current_regs()[a as usize].replace(Rc::new(RObject::nil()));
         } else {
             vm.current_regs()[a as usize].replace(res.unwrap());
         }
+
         return
     }
 
@@ -888,8 +893,10 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     if let Some(regs_a) = regs0[a].take() {
         regs0[0].replace(regs_a);
     }
-    for i in 1..nregs {
-        regs0[i].take();
+    if nregs > 0 {
+        for i in 1..=nregs {
+            regs0[i].take();
+        }
     }
 
     let ci = vm.current_callinfo.take();
@@ -906,6 +913,9 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     vm.pc.set(ci.pc);
     vm.current_regs_offset = ci.current_regs_offset;
     vm.target_class = ci.target_class.clone();
+    if vm.current_regs()[0].is_none() {
+        todo!("debug");
+    }
 }
 
 pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {

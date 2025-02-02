@@ -36,7 +36,7 @@ fn fib_test() {
           end
         end
     ";
-    let binary = mrbc_compile("fib", code);
+    let binary = mrbc_compile("fib1", code);
     let mut rite = mrubyedge::rite::load(&binary).unwrap();
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
     vm.run().unwrap();
@@ -87,7 +87,7 @@ fn fib2_test() {
           end
         end
     ";
-    let binary = mrbc_compile("fib", code);
+    let binary = mrbc_compile("fib2", code);
     let mut rite = mrubyedge::rite::load(&binary).unwrap();
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
     vm.run().unwrap();

@@ -151,7 +151,7 @@ impl VM {
 
         self.flag_preemption.set(false);
 
-        let retval = match self.regs[0].take() {
+        let retval = match self.current_regs()[0].take() {
             Some(v) => Ok(v),
             None => Ok(Rc::new(RObject::nil()))
         };

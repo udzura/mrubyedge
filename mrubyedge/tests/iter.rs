@@ -48,3 +48,49 @@ fn times_self_test() {
         .unwrap();
     assert!(true);
 }
+
+#[test]
+fn range_each_test() {
+    let code = "
+    def test_each
+      $i = 0
+      (1..10).each do |i|
+        $i += i * 2
+      end
+      $i
+    end
+    ";
+    let binary = mrbc_compile("range_each", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    let result: i32 = mrb_funcall(&mut vm, None, "test_each", &args)
+        .unwrap().as_ref().try_into().unwrap();
+    assert_eq!(result, 110);
+}
+
+#[test]
+fn array_each_test() {
+    let code = "
+    def test_each
+      $i = 0
+      [1, 10, 100, 1000, 10000].each do |i|
+        $i += i * 2
+      end
+      $i
+    end
+    ";
+    let binary = mrbc_compile("array_each", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    let result: i32 = mrb_funcall(&mut vm, None, "test_each", &args)
+        .unwrap().as_ref().try_into().unwrap();
+    assert_eq!(result, 22222);
+}

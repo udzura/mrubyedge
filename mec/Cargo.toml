@@ -1,6 +1,6 @@
 [package]
 name = "mec"
-version = "1.0.0-rc6"
+version = "1.0.0-rc7"
 edition = "2021"
 authors = ["Uchio Kondo <udzura@udzura.jp>"]
 description = "mruby/edge compiler cli endpoint"

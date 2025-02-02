@@ -9,6 +9,8 @@ pub(crate) fn initialize_shared_memory(vm: &mut VM) {
     let shared_memory_class = vm.define_standard_class("SharedMemory");
 
     mrb_define_cmethod(vm, shared_memory_class.clone(), "to_s", Box::new(mrb_shared_memory_to_string));
+    mrb_define_cmethod(vm, shared_memory_class.clone(), "offset_in_memory", Box::new(mrb_shared_memory_offset_in_memory));
+    mrb_define_cmethod(vm, shared_memory_class.clone(), "to_i", Box::new(mrb_shared_memory_offset_in_memory));
     mrb_define_cmethod(vm, shared_memory_class.clone(), "[]", Box::new(mrb_shared_memory_index_range));
     mrb_define_cmethod(vm, shared_memory_class.clone(), "[]=", Box::new(mrb_shared_memory_set_index_range));
     mrb_define_cmethod(vm, shared_memory_class.clone(), "read_by_size", Box::new(mrb_shared_memory_read_by_size));
@@ -23,6 +25,18 @@ pub fn mrb_shared_memory_new(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RO
         ))),
     });
     Ok(obj)
+}
+
+fn mrb_shared_memory_offset_in_memory(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself();
+    let sm = match &this.value {
+        RValue::SharedMemory(s) => s,
+        _ => {
+            return Err(Error::RuntimeError("SharedMemory#to_s must be called on a SharedMemory".to_string()));
+        }
+    };
+    let offset = sm.borrow().offset_in_memory();
+    Ok(Rc::new(RObject::integer(offset as i64)))
 }
 
 fn mrb_shared_memory_set_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {

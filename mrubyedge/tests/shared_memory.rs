@@ -32,6 +32,27 @@ end";
 }
 
 #[test]
+fn shared_memory_2_test() {
+    let code = "$memory = SharedMemory.new(64)
+
+def read_array_from_memory
+  $memory[0..0] = [123].pack('C')
+  result = $memory[0..0].unpack('C')
+  result[0]
+end";
+    let binary = mrbc_compile("shared_memory_2", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    let result  = mrb_funcall(&mut vm, None, "read_array_from_memory", &args).unwrap();
+    let result: i64 = result.as_ref().try_into().unwrap();
+    assert_eq!(result, 123);
+}
+
+#[test]
 fn shared_memory_write_test() {
     let code = "$memory = SharedMemory.new(64)
 

@@ -13,6 +13,10 @@ impl SharedMemory {
         SharedMemory { memory, size }
     }
 
+    pub fn offset_in_memory(&self) -> usize {
+        self.memory.as_ptr() as usize
+    }
+
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.memory.as_mut_ptr()
     }

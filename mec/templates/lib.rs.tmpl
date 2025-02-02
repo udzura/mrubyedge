@@ -75,12 +75,6 @@ fn initVM() {
 pub fn {{ fn.func_name }}({{ fn.args_decl }}) {{ fn.rettype_decl }} {
     let mut vm = unsafe { assume_initialized_VM() };
 
-{% for ifn in ftypes_imports %}
-    let klass = vm.object_class.clone();
-    let method = Box::new(__imported_c_{{ ifn.func_name }});
-    mrubyedge::yamrb::helpers::mrb_define_cmethod(&mut vm, klass, "{{ ifn.func_name }}", method);
-{% endfor %}
-
     {{ fn.str_args_converter }}
 
     vm.run().unwrap();

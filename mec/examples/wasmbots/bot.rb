@@ -1,7 +1,7 @@
 $memory = nil
-$countup = 0
 
 LOGLEVEL_INFO = 2
+LOGLEVEL_WARN = 1
 LOGLEVEL_ERROR = 0
 
 # pub enum WasmBotsError {
@@ -23,10 +23,9 @@ ERROR_END_OF_MESSAGE_LIST = 2
 # 	Open,
 # 	Close,
 # }
-MESSAGE_TYPE_ERROR = 0
-MESSAGE_TYPE_INITIAL_PARAMETERS = 1
-MESSAGE_TYPE_PRESENT_CIRCUMSTANCES = 2
-# 3 ?
+MESSAGE_TYPE_ERROR = 1
+MESSAGE_TYPE_INITIAL_PARAMETERS = 2
+MESSAGE_TYPE_PRESENT_CIRCUMSTANCES = 3
 MESSAGE_TYPE_WAIT = 4
 MESSAGE_TYPE_RESIGN = 5
 MESSAGE_TYPE_MOVE_TO = 6
@@ -76,6 +75,29 @@ DIRECTION_SOUTHWEST = 5
 DIRECTION_WEST = 6
 DIRECTION_NORTHWEST = 7
 
+class PresentCircumstances
+  def initialize(last_tick_duration, last_move_result, hit_points, surroundings)
+    @last_tick_duration = last_tick_duration
+    @last_move_result = last_move_result
+    @hit_points = hit_points
+    @surroundings = surroundings
+  end
+end
+
+class Brain
+  def write_move!(direction)
+    logFunction(LOGLEVEL_INFO, "direction: #{direction}")
+    $memory[0..2] = [MESSAGE_TYPE_MOVE_TO, direction, 1].pack("C C C")
+  end
+
+  def on_tick(curcumstances)
+
+    write_move!(DIRECTION_NORTH)
+  end
+end
+
+$brain = Brain.new
+
 def clientInitialize
   logFunction(LOGLEVEL_INFO, "Hello, world! This is made by #{RUBY_ENGINE}")
 end
@@ -88,8 +110,8 @@ def setup(requested_size)
   $memory[0..17] = name
   # $memory[18..25] = "\0" * 8
   $memory[26..27] = [0].pack("S")
-  $memory[28..29] = [0].pack("S")
-  $memory[30..31] = [1].pack("S")
+  $memory[28..29] = [1].pack("S")
+  $memory[30..31] = [0].pack("S")
   $memory
 end
   
@@ -105,50 +127,17 @@ def receiveGameParams(offset)
 end
   
 def tick(offset)
-  # setup(4096)
-
-  logFunction(LOGLEVEL_INFO, "countup: #{$countup}")
   param_pre = $memory[offset..(offset+8)].unpack("I C S S")
-  logFunction(LOGLEVEL_INFO, "last_tick_duration: #{param_pre[0]}")
-  logFunction(LOGLEVEL_INFO, "last_move_result: #{param_pre[1]}")
-  logFunction(LOGLEVEL_INFO, "hit_points: #{param_pre[2]}")
 
   surroundings_len = param_pre[3]
-  # $surroundings = []
+  $surroundings = []
   $offset = offset
 
   surroundings_len.times do |i|
     ptr = $offset + 9 + i
     tile = $memory[ptr..ptr].unpack("C")
-    logFunction(LOGLEVEL_INFO, "got tile: #{tile[0]}")
-    # $surroundings.push tile
+    $surroundings.push tile[0]
   end
-  # surroundings_radius = $memory[(offset+9+surroundings_len)..(offset+9+surroundings_len)].unpack("C")
-  # logFunction(LOGLEVEL_INFO, "surroundings_radius: #{surroundings_radius[0]}")
-
-  if $countup < 32
-    # wait message
-    # $memory[0..0] = [MESSAGE_TYPE_WAIT].pack("C")
-    # move message
-    direction = if $countup % 4 == 0
-      DIRECTION_NORTH
-    elsif $countup % 4 == 1
-      DIRECTION_EAST
-    elsif $countup % 4 == 2
-      DIRECTION_SOUTH
-    elsif $countup % 4 == 3
-      DIRECTION_WEST
-    end
-    logFunction(LOGLEVEL_INFO, "direction: #{direction}")
-    $memory[0..2] = [MESSAGE_TYPE_MOVE_TO, direction, 1].pack("C C C")
-    $countup += 1
-  else
-    logFunction(LOGLEVEL_INFO, "exitting: countup = #{$countup}")
-    # resign message
-    $memory[0..0] = [MESSAGE_TYPE_RESIGN].pack("C")
-  end
+  curcumstances = PresentCircumstances.new(param_pre[0], param_pre[1], param_pre[2], $surroundings)
+  $brain.on_tick(curcumstances)
 end
-
-#def logFunction(level, message)
-#  puts "[#{level}]: #{message}"
-#end

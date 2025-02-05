@@ -645,12 +645,12 @@ pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
-    let n = c as usize + 1;
-    let mut callinfo = vm.current_callinfo.clone().unwrap();
+    let n = c as usize;
+    let mut environ = vm.upper.as_ref().expect("op_getupvar expects upper env");
     for _ in 0..n {
-        callinfo = callinfo.prev.clone().unwrap();
+        environ = environ.upper.as_ref().expect("op_getupvar failed to find upvar");
     }
-    let up_regs = &vm.regs[callinfo.current_regs_offset..];
+    let up_regs = &vm.regs[environ.current_regs_offset..];
     let val = up_regs[b as usize].clone();
     vm.current_regs()[a as usize].replace(val.unwrap());
 }
@@ -1173,6 +1173,10 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
+    let environ = ENV {
+        upper: vm.upper.clone(),
+        current_regs_offset: vm.current_regs_offset,
+    };
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
@@ -1181,6 +1185,7 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
             sym_id: Some("<lambda>".into()),
             next: None,
             func: None,
+            environ: Some(Rc::new(environ)),
             block_self: Some(vm.getself()),
         }),
     };
@@ -1190,14 +1195,19 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
+    let environ = ENV {
+        upper: vm.upper.clone(),
+        current_regs_offset: vm.current_regs_offset,
+    };
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
             irep,
             is_rb_func: true,
-            sym_id: Some("<lambda>".into()),
+            sym_id: Some("<proc>".into()),
             next: None,
             func: None,
+            environ: Some(Rc::new(environ)),
             block_self: Some(vm.getself()),
         }),
     };
@@ -1215,6 +1225,7 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
             sym_id: None,
             next: None,
             func: None,
+            environ: None,
             block_self: None,
         }),
     };

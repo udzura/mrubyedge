@@ -38,6 +38,8 @@ pub struct VM {
     pub globals: HashMap<String, Rc<RObject>>,
     pub consts: HashMap<String, Rc<RObject>>,
 
+    pub upper: Option<Rc<ENV>>,
+
     pub fn_table: Vec<Rc<RFn>>,
 }
 
@@ -89,6 +91,7 @@ impl VM {
         let error_code = 0;
         let flag_preemption = Cell::new(false);
         let fn_table = Vec::new();
+        let upper = None;
 
         let mut vm = VM {
             id,
@@ -106,6 +109,7 @@ impl VM {
             builtin_class_table,
             globals,
             consts,
+            upper,
             fn_table
         };
 
@@ -277,4 +281,10 @@ pub struct CALLINFO {
     pub current_regs_offset: usize,
     pub target_class: Rc<RClass>,
     pub n_args: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct ENV {
+    pub upper: Option<Rc<ENV>>,
+    pub current_regs_offset: usize,
 }

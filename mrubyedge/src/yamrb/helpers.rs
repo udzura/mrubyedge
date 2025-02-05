@@ -5,7 +5,7 @@ use crate::Error;
 use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym, RValue}, vm::VM};
 
 fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    push_callinfo(vm, RSym::new("block".to_string()), args.len());
+    push_callinfo(vm, RSym::new("<block>".to_string()), args.len());
 
     let old_callinfo = vm.current_callinfo.take();
 
@@ -21,6 +21,7 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
 
     vm.pc.set(0);
     vm.current_irep = block.irep.as_ref().unwrap().clone();
+    vm.upper = block.environ;
     let res = vm.run().unwrap();
 
     if let Some(prev) = prev_self {
@@ -45,6 +46,7 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
         vm.current_regs_offset = ci.current_regs_offset;
         vm.target_class = ci.target_class.clone();
     }
+    vm.upper.take();
 
     Ok(res.clone())
 }
@@ -98,6 +100,7 @@ pub fn mrb_define_cmethod(vm: &mut VM, klass: Rc<RClass>, name: &str, cmethod: R
         next: None,
         irep: None,
         func: Some(index),
+        environ: None,
         block_self: None,
     };
     let mut procs = klass.procs.borrow_mut();

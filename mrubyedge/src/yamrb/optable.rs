@@ -657,13 +657,15 @@ pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
-    let n = c as usize + 1;
-    let mut callinfo = vm.current_callinfo.clone().unwrap();
+    let n = c as usize;
+    let mut environ = vm.upper.as_ref().expect("op_getupvar expects upper env");
     for _ in 0..n {
-        callinfo = callinfo.prev.clone().unwrap();
+        environ = environ.upper.as_ref().expect("op_getupvar failed to find upvar");
     }
-    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
-    let up_regs = &mut vm.regs[callinfo.current_regs_offset..];
+    let current_regs_offset = environ.current_regs_offset;
+
+    let val = vm.current_regs()[a as usize].clone().unwrap();
+    let up_regs = &mut vm.regs[current_regs_offset..];
     up_regs[b as usize].replace(val);
 }
 

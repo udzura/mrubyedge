@@ -1,3 +1,6 @@
+# TODO: This won't work using shifted register slice.
+# if we want to allow orphaned lambda,
+# we need to use an environment structure to capture the upvalues. 
 def do_time_block
   result = 0
   ->(i) {

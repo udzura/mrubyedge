@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::Error;
 
-use super::vm::{IREP, VM};
+use super::vm::{ENV, IREP, VM};
 use super::shared_memory::SharedMemory;
 
 #[derive(Debug, Clone, Copy)]
@@ -408,6 +408,7 @@ pub struct RProc {
     pub next: Option<Rc<RProc>>,
     pub irep: Option<Rc<IREP>>,
     pub func: Option<usize>,
+    pub environ: Option<Rc<ENV>>,
     pub block_self: Option<Rc<RObject>>,
 }
 

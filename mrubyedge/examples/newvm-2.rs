@@ -21,6 +21,7 @@ fn main() {
     //     2 012 RETURN	R4		
     //
     let irep1 = vm::IREP {
+        __id: 0,
         nlocals: 4,
         nregs: 7,
         rlen: 0,
@@ -53,6 +54,7 @@ fn main() {
     //     7 026 STOP
     //
     let irep0 = vm::IREP {
+        __id: 1,
         nlocals: 3,
         nregs: 7,
         rlen: 1,

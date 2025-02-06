@@ -40,6 +40,7 @@ fn main() {
     //     7 064 RETURN	R3		
     //
     let irep1 = vm::IREP {
+        __id: 0,
         nlocals: 3,
         nregs: 8,
         rlen: 0,
@@ -86,6 +87,7 @@ fn main() {
     //    11 017 STOP
     //
     let irep0 = vm::IREP {
+        __id: 1,
         nlocals: 1,
         nregs: 3,
         rlen: 1,

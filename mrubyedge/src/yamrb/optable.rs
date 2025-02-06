@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+use std::cell::Cell;
 use std::cell::RefCell;
 
 use std::collections::HashMap;
@@ -402,7 +402,6 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
             op_lambda(vm, &operand);
         }
         BLOCK => {
-            // op_block(vm, &operand);
             op_block(vm, &operand);
         }
         METHOD => {
@@ -645,26 +644,49 @@ pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) {
 
 pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
-    let n = c as usize + 1;
-    let mut callinfo = vm.current_callinfo.clone().unwrap();
+    let n = c as usize;
+    let mut environ = vm.upper.as_ref().expect("op_getupvar expects upper env");
     for _ in 0..n {
-        callinfo = callinfo.prev.clone().unwrap();
+        environ = environ.upper.as_ref().expect("op_getupvar failed to find upvar");
     }
-    let up_regs = &vm.regs[callinfo.current_regs_offset..];
-    let val = up_regs[b as usize].clone();
-    vm.current_regs()[a as usize].replace(val.unwrap());
+    let environ = environ.clone();
+    let up_regs = &vm.regs[environ.current_regs_offset..];
+    if !environ.expired() {
+        if let Some(val) = up_regs[b as usize].as_ref().cloned() {
+            vm.current_regs()[a as usize].replace(val);
+        } else {
+            panic!("register {} is empty", b);
+        }
+    } else {
+        let captured = environ.captured.borrow();
+        let val = &captured.as_ref().unwrap().clone()[b as usize];
+        let val = val.clone();
+        vm.current_regs()[a as usize].replace(val.unwrap());
+    }
 }
 
 pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
     let (a, b, c) = operand.as_bbb().unwrap();
-    let n = c as usize + 1;
-    let mut callinfo = vm.current_callinfo.clone().unwrap();
+    let n = c as usize;
+    let mut environ = vm.upper.as_ref().expect("op_getupvar expects upper env");
     for _ in 0..n {
-        callinfo = callinfo.prev.clone().unwrap();
+        environ = environ.upper.as_ref().expect("op_getupvar failed to find upvar");
     }
+    let environ = environ.clone();
+    let current_regs_offset = environ.current_regs_offset;
+
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
-    let up_regs = &mut vm.regs[callinfo.current_regs_offset..];
-    up_regs[b as usize].replace(val);
+    // let up_regs = &vm.regs[environ.current_regs_offset..];
+    if !environ.expired() {
+        let up_regs= &mut vm.regs[current_regs_offset..];
+        let target = &mut up_regs[b as usize];
+        target.replace(val);
+    } else {
+        let mut captured = environ.captured.borrow_mut();
+        let captured = captured.as_mut().unwrap();
+        let target = &mut captured[b as usize];
+        target.replace(val);
+    }
 }
 
 pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) {
@@ -884,10 +906,20 @@ pub(crate) fn op_enter(vm: &mut VM, operand: &Fetched) {
 }
 
 pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
-    // TODO: handle callinfo stack...
     let a = operand.as_b().unwrap() as usize;
     let old_irep = vm.current_irep.clone();
     let nregs = old_irep.nregs;
+
+    // TODO: capturing env on return makes lots of clone
+    //       I wish it would be optimized
+    let regs0_cloned: Vec<_> = vm.current_regs()[0..nregs].iter().cloned().collect();
+    if let Some(_) = vm.has_env_ref.get(&vm.current_irep.__id) {
+        if let Some(environ) = vm.cur_env.get(&vm.current_irep.__id) {
+            environ.capture_no_clone(regs0_cloned);
+            environ.as_ref().expire();
+            vm.has_env_ref.remove(&vm.current_irep.__id);
+        }
+    }
 
     let regs0 = vm.current_regs();
     if let Some(regs_a) = regs0[a].take() {
@@ -1173,6 +1205,18 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
+    let environ = ENV {
+        upper: vm.upper.clone(),
+        current_regs_offset: vm.current_regs_offset,
+        is_expired: Cell::new(false),
+        captured: RefCell::new(None),
+    };
+    let nregs = vm.current_irep.nregs;
+    environ.capture(&vm.current_regs()[0..nregs]);
+    let environ = Rc::new(environ);
+    vm.cur_env.insert(vm.current_irep.__id, environ.clone());
+    vm.has_env_ref.insert(vm.current_irep.__id,true);
+
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
@@ -1181,6 +1225,7 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
             sym_id: Some("<lambda>".into()),
             next: None,
             func: None,
+            environ: Some(environ),
             block_self: Some(vm.getself()),
         }),
     };
@@ -1190,14 +1235,25 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
+    let environ = ENV {
+        upper: vm.upper.clone(),
+        current_regs_offset: vm.current_regs_offset,
+        is_expired: Cell::new(false),
+        captured: RefCell::new(None),
+    };
+    let environ = Rc::new(environ);
+    vm.cur_env.insert(vm.current_irep.__id, environ.clone());
+    vm.has_env_ref.insert(vm.current_irep.__id,true);
+
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
             irep,
             is_rb_func: true,
-            sym_id: Some("<lambda>".into()),
+            sym_id: Some("<block>".into()),
             next: None,
             func: None,
+            environ: Some(environ),
             block_self: Some(vm.getself()),
         }),
     };
@@ -1215,6 +1271,7 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
             sym_id: None,
             next: None,
             func: None,
+            environ: None,
             block_self: None,
         }),
     };

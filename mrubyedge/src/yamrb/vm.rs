@@ -38,6 +38,11 @@ pub struct VM {
     pub globals: HashMap<String, Rc<RObject>>,
     pub consts: HashMap<String, Rc<RObject>>,
 
+    pub upper: Option<Rc<ENV>>,
+    // TODO: using fixed array?
+    pub cur_env: HashMap<usize, Rc<ENV>>,
+    pub has_env_ref: HashMap<usize, bool>,
+
     pub fn_table: Vec<Rc<RFn>>,
 }
 
@@ -50,6 +55,7 @@ impl VM {
 
     pub fn empty() -> VM {
         let irep = IREP {
+            __id: 0,
             nlocals: 0,
             nregs: 0,
             rlen: 0,
@@ -89,6 +95,9 @@ impl VM {
         let error_code = 0;
         let flag_preemption = Cell::new(false);
         let fn_table = Vec::new();
+        let upper = None;
+        let cur_env = HashMap::new();
+        let has_env_ref = HashMap::new();
 
         let mut vm = VM {
             id,
@@ -106,6 +115,9 @@ impl VM {
             builtin_class_table,
             globals,
             consts,
+            upper,
+            cur_env,
+            has_env_ref,
             fn_table
         };
 
@@ -220,6 +232,7 @@ fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
 fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
     let irep = &mut reps[pos];
     let mut irep1 = IREP {
+        __id: pos,
         nlocals: irep.nlocals(),  
         nregs: irep.nregs(),
         rlen: irep.rlen(),
@@ -259,6 +272,8 @@ fn rite_to_irep(rite: &mut Rite) -> IREP {
 
 #[derive(Debug, Clone)]
 pub struct IREP {
+    pub __id: usize,
+
     pub nlocals: usize,
     pub nregs: usize, // NOTE: is u8 better?
     pub rlen: usize,
@@ -277,4 +292,36 @@ pub struct CALLINFO {
     pub current_regs_offset: usize,
     pub target_class: Rc<RClass>,
     pub n_args: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct ENV {
+    pub upper: Option<Rc<ENV>>,
+    pub captured: RefCell<Option<Vec<Option<Rc<RObject>>>>>,
+    pub current_regs_offset: usize,
+    pub is_expired: Cell<bool>,
+}
+
+impl ENV {
+    pub fn has_captured(&self) -> bool {
+        self.captured.borrow().is_some()
+    }
+
+    pub fn capture(&self, regs: &[Option<Rc<RObject>>]) {
+        let mut captured = self.captured.borrow_mut();
+        captured.replace(regs.iter().map(|r| r.clone()).collect());
+    }
+
+    pub fn capture_no_clone(&self, regs: Vec<Option<Rc<RObject>>>) {
+        let mut captured = self.captured.borrow_mut();
+        captured.replace(regs);
+    }
+
+    pub fn expire(&self) {
+        self.is_expired.set(true);
+    }
+
+    pub fn expired(&self) -> bool {
+        self.is_expired.get()
+    }
 }

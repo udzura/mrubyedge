@@ -19,6 +19,7 @@ use value::RSym;
 //
 fn main() {
     let irep = vm::IREP {
+        __id: 0,
         nlocals: 0,
         nregs: 7,
         rlen: 0,

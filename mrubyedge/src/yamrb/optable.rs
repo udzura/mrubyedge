@@ -402,7 +402,6 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
             op_lambda(vm, &operand);
         }
         BLOCK => {
-            // op_block(vm, &operand);
             op_block(vm, &operand);
         }
         METHOD => {
@@ -907,10 +906,20 @@ pub(crate) fn op_enter(vm: &mut VM, operand: &Fetched) {
 }
 
 pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
-    // TODO: handle callinfo stack...
     let a = operand.as_b().unwrap() as usize;
     let old_irep = vm.current_irep.clone();
     let nregs = old_irep.nregs;
+
+    // TODO: capturing env on return makes lots of clone
+    //       I wish it would be optimized
+    let regs0_cloned: Vec<_> = vm.current_regs()[0..nregs].iter().cloned().collect();
+    if let Some(_) = vm.has_env_ref.get(&vm.current_irep.__id) {
+        if let Some(environ) = vm.cur_env.get(&vm.current_irep.__id) {
+            environ.capture_no_clone(regs0_cloned);
+            environ.as_ref().expire();
+            vm.has_env_ref.remove(&vm.current_irep.__id);
+        }
+    }
 
     let regs0 = vm.current_regs();
     if let Some(regs_a) = regs0[a].take() {
@@ -919,13 +928,6 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     if nregs > 0 {
         for i in 1..=nregs {
             regs0[i].take();
-        }
-    }
-
-    if let Some(_) = vm.has_env_ref.get(&vm.current_irep.__id) {
-        if let Some(environ) = vm.cur_env.get(&vm.current_irep.__id) {
-            environ.as_ref().expire();
-            vm.has_env_ref.remove(&vm.current_irep.__id);
         }
     }
 
@@ -1241,8 +1243,6 @@ pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
         is_expired: Cell::new(false),
         captured: RefCell::new(None),
     };
-    let nregs = vm.current_irep.nregs;
-    environ.capture(&vm.current_regs()[0..nregs]);
     let environ = Rc::new(environ);
     vm.cur_env.insert(vm.current_irep.__id, environ.clone());
     vm.has_env_ref.insert(vm.current_irep.__id,true);

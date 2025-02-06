@@ -317,6 +317,11 @@ impl ENV {
         captured.replace(regs.iter().map(|r| r.clone()).collect());
     }
 
+    pub fn capture_no_clone(&self, regs: Vec<Option<Rc<RObject>>>) {
+        let mut captured = self.captured.borrow_mut();
+        captured.replace(regs);
+    }
+
     pub fn expire(&self) {
         self.is_expired.set(true);
     }

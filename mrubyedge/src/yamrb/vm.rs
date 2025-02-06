@@ -1,7 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::env;
 use std::error::Error;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 use std::collections::HashMap;
 
 use crate::rite::{insn, Irep, Rite};
@@ -297,7 +297,6 @@ pub struct CALLINFO {
 #[derive(Debug, Clone)]
 pub struct ENV {
     pub upper: Option<Rc<ENV>>,
-    pub children: RefCell<Vec<Weak<ENV>>>,
     pub captured: RefCell<Option<Vec<Option<Rc<RObject>>>>>,
     pub current_regs_offset: usize,
     pub is_expired: Cell<bool>,
@@ -306,10 +305,6 @@ pub struct ENV {
 impl ENV {
     pub fn has_captured(&self) -> bool {
         self.captured.borrow().is_some()
-    }
-
-    pub fn push_children(&self, child: Rc<ENV>) {
-        self.children.borrow_mut().push(Rc::downgrade(&child));
     }
 
     pub fn capture(&self, regs: &[Option<Rc<RObject>>]) {

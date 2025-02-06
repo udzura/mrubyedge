@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::Error;
 
-use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym, RValue}, vm::{ENV, VM}};
+use super::{optable::push_callinfo, value::{RClass, RFn, RObject, RProc, RSym, RValue}, vm::VM};
 
 fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     push_callinfo(vm, RSym::new("<block>".to_string()), args.len());
@@ -21,10 +21,6 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
 
     vm.pc.set(0);
     vm.current_irep = block.irep.as_ref().unwrap().clone();
-    if let (Some(environ) , Some(upper_environ))= (block.environ.as_ref(), vm.upper.as_ref()) {
-        let mut children = environ.children.borrow_mut();
-        children.push(Rc::<ENV>::downgrade(&upper_environ));
-    }
     vm.upper = block.environ;
 
     let res = vm.run().unwrap();

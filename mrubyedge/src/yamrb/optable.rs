@@ -1207,7 +1207,6 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let environ = ENV {
         upper: vm.upper.clone(),
-        children: RefCell::new(vec![]),
         current_regs_offset: vm.current_regs_offset,
         is_expired: Cell::new(false),
         captured: RefCell::new(None),
@@ -1238,7 +1237,6 @@ pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let environ = ENV {
         upper: vm.upper.clone(),
-        children: RefCell::new(vec![]),
         current_regs_offset: vm.current_regs_offset,
         is_expired: Cell::new(false),
         captured: RefCell::new(None),

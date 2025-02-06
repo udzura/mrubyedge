@@ -47,7 +47,11 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
         vm.current_regs_offset = ci.current_regs_offset;
         vm.target_class = ci.target_class.clone();
     }
-    vm.upper.take();
+    if let Some(upper) = vm.upper.take() {
+        if let Some(upper) = &upper.as_ref().upper {
+            vm.upper.replace(upper.clone());
+        }
+    }
 
     Ok(res.clone())
 }

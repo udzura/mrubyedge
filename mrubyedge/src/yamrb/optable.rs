@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+use std::cell::Cell;
 use std::cell::RefCell;
 
 use std::collections::HashMap;
@@ -650,9 +650,20 @@ pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) {
     for _ in 0..n {
         environ = environ.upper.as_ref().expect("op_getupvar failed to find upvar");
     }
+    let environ = environ.clone();
     let up_regs = &vm.regs[environ.current_regs_offset..];
-    let val = up_regs[b as usize].clone();
-    vm.current_regs()[a as usize].replace(val.unwrap());
+    if !environ.expired() {
+        if let Some(val) = up_regs[b as usize].as_ref().cloned() {
+            vm.current_regs()[a as usize].replace(val);
+        } else {
+            panic!("register {} is empty", b);
+        }
+    } else {
+        let captured = environ.captured.borrow();
+        let val = &captured.as_ref().unwrap().clone()[b as usize];
+        let val = val.clone();
+        vm.current_regs()[a as usize].replace(val.unwrap());
+    }
 }
 
 pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
@@ -662,11 +673,21 @@ pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
     for _ in 0..n {
         environ = environ.upper.as_ref().expect("op_getupvar failed to find upvar");
     }
+    let environ = environ.clone();
     let current_regs_offset = environ.current_regs_offset;
 
-    let val = vm.current_regs()[a as usize].clone().unwrap();
-    let up_regs = &mut vm.regs[current_regs_offset..];
-    up_regs[b as usize].replace(val);
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    // let up_regs = &vm.regs[environ.current_regs_offset..];
+    if !environ.expired() {
+        let up_regs= &mut vm.regs[current_regs_offset..];
+        let target = &mut up_regs[b as usize];
+        target.replace(val);
+    } else {
+        let mut captured = environ.captured.borrow_mut();
+        let captured = captured.as_mut().unwrap();
+        let target = &mut captured[b as usize];
+        target.replace(val);
+    }
 }
 
 pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) {
@@ -898,6 +919,13 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     if nregs > 0 {
         for i in 1..=nregs {
             regs0[i].take();
+        }
+    }
+
+    if let Some(_) = vm.has_env_ref.get(&vm.current_irep.__id) {
+        if let Some(environ) = vm.cur_env.get(&vm.current_irep.__id) {
+            environ.as_ref().expire();
+            vm.has_env_ref.remove(&vm.current_irep.__id);
         }
     }
 
@@ -1177,8 +1205,17 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let environ = ENV {
         upper: vm.upper.clone(),
+        children: RefCell::new(vec![]),
         current_regs_offset: vm.current_regs_offset,
+        is_expired: Cell::new(false),
+        captured: RefCell::new(None),
     };
+    let nregs = vm.current_irep.nregs;
+    environ.capture(&vm.current_regs()[0..nregs]);
+    let environ = Rc::new(environ);
+    vm.cur_env.insert(vm.current_irep.__id, environ.clone());
+    vm.has_env_ref.insert(vm.current_irep.__id,true);
+
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
@@ -1187,7 +1224,7 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
             sym_id: Some("<lambda>".into()),
             next: None,
             func: None,
-            environ: Some(Rc::new(environ)),
+            environ: Some(environ),
             block_self: Some(vm.getself()),
         }),
     };
@@ -1199,17 +1236,26 @@ pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let environ = ENV {
         upper: vm.upper.clone(),
+        children: RefCell::new(vec![]),
         current_regs_offset: vm.current_regs_offset,
+        is_expired: Cell::new(false),
+        captured: RefCell::new(None),
     };
+    let nregs = vm.current_irep.nregs;
+    environ.capture(&vm.current_regs()[0..nregs]);
+    let environ = Rc::new(environ);
+    vm.cur_env.insert(vm.current_irep.__id, environ.clone());
+    vm.has_env_ref.insert(vm.current_irep.__id,true);
+
     let val = RObject {
         tt: RType::Proc,
         value: RValue::Proc(RProc {
             irep,
             is_rb_func: true,
-            sym_id: Some("<proc>".into()),
+            sym_id: Some("<block>".into()),
             next: None,
             func: None,
-            environ: Some(Rc::new(environ)),
+            environ: Some(environ),
             block_self: Some(vm.getself()),
         }),
     };

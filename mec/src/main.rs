@@ -21,6 +21,7 @@ struct ParsedOpt {
     skip_cleanup: bool,
     debug_mruby_edge: bool,
     verbose: bool,
+    strip_binary: bool,
     path: PathBuf,
 }
 
@@ -67,13 +68,14 @@ fn not_help_or_version_flag(buf: PathBuf) -> Option<PathBuf> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let fnname = long("fnname").argument::<PathBuf>("FNNAME").optional();
-    let mruby_edge_version = long("mruby-edge-version").argument::<String>("MRBE_VERSION").optional();
+    let fnname = long("fnname").short('f').argument::<PathBuf>("FNNAME").optional();
+    let mruby_edge_version = long("mruby-edge-version").short('m').argument::<String>("MRBE_VERSION").optional();
     let skip_cleanup = long("skip-cleanup").switch();
     let path = any::<PathBuf, _, _>("MRUBY_FILE", not_help_or_version_flag);
-    let no_wasi = long("no-wasi").switch();
+    let no_wasi = long("no-wasi").short('W').switch();
     let debug_mruby_edge = long("debug-mruby-edge").switch();
     let verbose = long("verbose").switch();
+    let strip_binary = long("strip-binary").short('S').switch();
     let opts: ParsedOpt = construct!(ParsedOpt {
         fnname,
         mruby_edge_version,
@@ -81,6 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         skip_cleanup,
         debug_mruby_edge,
         verbose,
+        strip_binary,
         path,
     })
     .to_options()
@@ -147,7 +150,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cargo_toml = CargoToml {
             mrubyedge_version: &opts.mruby_edge_version.unwrap_or_else(|| MRUBY_EDGE_DEFAULT_VERSION.to_string()),
             mrubyedge_feature: feature,
-            strip: "true",
+            strip: &opts.strip_binary.to_string(),
         };
         std::fs::write("Cargo.toml", cargo_toml.render()?)?;
     }

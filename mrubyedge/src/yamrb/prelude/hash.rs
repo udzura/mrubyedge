@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
 use crate::{yamrb::{helpers::{mrb_call_block, mrb_define_cmethod}, value::{RObject, RValue}, vm::VM}, Error};
 
@@ -37,7 +37,7 @@ fn mrb_hash_set_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObje
 
 pub fn mrb_hash_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let hash = match &this.value {
-        RValue::Hash(a) => a.clone(),
+        RValue::Hash(a) => a,
         _ => {
             return Err(Error::RuntimeError("Hash#[] must called on a hash".to_string()));
         }
@@ -47,7 +47,6 @@ pub fn mrb_hash_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<
     let hashed  = key.as_hash_key()?;
     let value = &args[1];
     hash.insert(hashed, (key, value.clone()));
-    dbg!(&hash);
     Ok(value.clone())
 }
 
@@ -70,7 +69,49 @@ fn mrb_hash_each(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error
 }
 
 #[test]
+fn test_hashing() {
+    let vec1 = RObject::string("key".to_string());
+    let vec2 = RObject::string("key".to_string()).clone();
+    assert_eq!(vec1.as_hash_key(), vec2.as_hash_key());
+}
+
+#[test]
 fn test_mrb_hash_set_and_index() {
+    use std::collections::HashMap;
+    use crate::yamrb::*;
+    let mut vm = VM::empty();
+    prelude::prelude(&mut vm);
+
+    let hash = Rc::new(RObject::hash(HashMap::new()));
+    let keys = vec![
+        Rc::new(RObject::string("key".to_string())),
+        Rc::new(RObject::integer(1234)),
+        Rc::new(RObject::symbol("key2".into())),
+    ];
+    let values = vec![
+        Rc::new(RObject::integer(1)),
+        Rc::new(RObject::integer(2)),
+        Rc::new(RObject::integer(42)),
+    ];
+
+    for (i, key) in keys.iter().enumerate() {
+        let value = &values[i];
+        let args = vec![key.clone(), value.clone()];
+        mrb_hash_set_index(hash.clone(), &args).expect("set index failed");
+    }
+
+    for (i, key) in keys.iter().enumerate() {
+        let get_args = vec![key.clone()];
+        let value = mrb_hash_get_index(hash.clone(), &get_args).expect("getting index failed");
+        let value: i64 = value.as_ref().try_into().expect("value is not integer");
+        let expected: i64 = values[i].as_ref().try_into().expect("expected is not integer");
+        assert_eq!(value, expected);
+    }
+}
+
+#[test]
+fn test_mrb_hash_set_and_index_not_found() {
+    use std::collections::HashMap;
     use crate::yamrb::*;
     let mut vm = VM::empty();
     prelude::prelude(&mut vm);
@@ -82,9 +123,9 @@ fn test_mrb_hash_set_and_index() {
 
     mrb_hash_set_index(hash.clone(), &args).expect("set index failed");
 
+    let key = Rc::new(RObject::string("key2".to_string()));
     let get_args = vec![key.clone()];
     let value = mrb_hash_get_index(hash.clone(), &get_args).expect("getting index failed");
-    dbg!(&value);
-    let value: i64 = value.as_ref().try_into().expect("value is not integer");
-    assert_eq!(value, 42);
+    let value = value.as_ref();
+    assert!(value.is_nil());
 }

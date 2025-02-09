@@ -109,7 +109,7 @@ fn hash_each_test_2() {
       res
     end
     ";
-    let binary = mrbc_compile("hash_each", code);
+    let binary = mrbc_compile("hash_each_2", code);
     let mut rite = mrubyedge::rite::load(&binary).unwrap();
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
     vm.run().unwrap();

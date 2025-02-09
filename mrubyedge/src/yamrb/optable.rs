@@ -1196,7 +1196,7 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
     for i in 0..(b*2) {
         let key = vm.current_regs()[a + i * 2].clone().unwrap();
         let val = vm.current_regs()[a + i * 2 + 1].clone().unwrap();
-        hash.insert(key.as_hash_key(), val);
+        hash.insert(key.as_hash_key().expect("Not a hash key type"), (key, val));
     }
     let val = RObject::hash(hash);
     vm.current_regs()[a as usize].replace(Rc::new(val));

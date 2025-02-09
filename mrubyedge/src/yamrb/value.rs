@@ -33,12 +33,22 @@ pub enum RValue {
     Instance(RInstance),
     Proc(RProc),
     Array(RefCell<Vec<Rc<RObject>>>),
-    Hash(HashMap<String, Rc<RObject>>),
+    Hash(RefCell<HashMap<ValueHasher, (Rc<RObject>, Rc<RObject>)>>),
     String(RefCell<Vec<u8>>),
     Range(Rc<RObject>, Rc<RObject>, bool),
     SharedMemory(Rc<RefCell<SharedMemory>>),
     Data,
     Nil,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ValueHasher {
+    Bool(bool),
+    Integer(i64),
+    Float(Vec<u8>),
+    Symbol(String),
+    String(Vec<u8>),
+    Class(String),
 }
 
 #[derive(Debug, Clone)]
@@ -104,10 +114,10 @@ impl RObject {
         }
     }
 
-    pub fn hash(h: HashMap<String, Rc<RObject>>) -> Self {
+    pub fn hash(h: HashMap<ValueHasher, (Rc<RObject>, Rc<RObject>)>) -> Self {
         RObject {
             tt: RType::Hash,
-            value: RValue::Hash(h),
+            value: RValue::Hash(RefCell::new(h)),
         }
     }
 
@@ -141,13 +151,17 @@ impl RObject {
     }
 
     // TODO: implment Object#hash
-    pub fn as_hash_key(&self) -> String {
+    pub fn as_hash_key(&self) -> Result<ValueHasher, Error> {
         match &self.value {
-            RValue::String(s) => format!("__String__{}", String::from_utf8_lossy(&s.borrow())),
-            RValue::Integer(i) => format!("__Integer__{}", *i),
-            RValue::Symbol(s) => format!("__Symbol__{}", s.name),
-            RValue::Bool(b) => format!("__Bool__{:?}", *b),
-            _ => unimplemented!("Key should be one of String, Integer, Symbol, or Boolean for now"),
+            RValue::Bool(b) => Ok(ValueHasher::Bool(*b)),
+            RValue::Integer(i) => Ok(ValueHasher::Integer(*i)),
+            RValue::Float(f) => Ok(ValueHasher::Float(f.to_be_bytes().to_vec())),
+            RValue::Symbol(s) => Ok(ValueHasher::Symbol(s.name.clone())),
+            RValue::String(s) => Ok(ValueHasher::String(s.borrow().clone())),
+            RValue::Class(c) => Ok(ValueHasher::Class(c.sym_id.name.clone())),
+            _ => {
+                Err(Error::TypeMismatch)
+            }
         }
     }
 

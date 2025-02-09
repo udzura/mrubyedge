@@ -27,7 +27,7 @@ macro_rules! mrbc_compile_ {
     
             let args = [
                 CStr::from_bytes_with_nul(b"mrbc\0").unwrap().as_ptr(),
-                // CStr::from_bytes_with_nul(b"-v\0").unwrap().as_ptr(),
+                //CStr::from_bytes_with_nul(b"-v\0").unwrap().as_ptr(),
                 CStr::from_bytes_with_nul(b"-o\0").unwrap().as_ptr(),
                 CStr::from_bytes_with_nul(dest0.as_bytes()).unwrap().as_ptr(),
                 CStr::from_bytes_with_nul(src0.as_bytes()).unwrap().as_ptr(),

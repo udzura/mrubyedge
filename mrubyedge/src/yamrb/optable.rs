@@ -957,13 +957,31 @@ pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
     let val2 = vm.current_regs()[b].take().unwrap();
     let result = match (&val1.value, &val2.value) {
         (RValue::Integer(n1), RValue::Integer(n2)) => {
-            RObject::integer(n1 + n2)
+            Rc::new(RObject::integer(n1 + n2))
+        }
+        (RValue::Float(n1), RValue::Float(n2)) => {
+            Rc::new(RObject::float(n1 + n2))
+        }
+        (RValue::Integer(n1), RValue::Float(n2)) => {
+            Rc::new(RObject::float(*n1 as f64 + n2))
+        }
+        (RValue::Float(n1), RValue::Integer(n2)) => {
+            Rc::new(RObject::float(n1 + *n2 as f64))
+        }
+        (RValue::String(n1), RValue::String(n2)) => {
+            let mut n1 = n1.borrow_mut();
+            let n2 = n2.borrow();
+            for c in n2.iter() {
+                n1.push(*c);
+            }
+            val1.clone()
         }
         _ => {
-            unreachable!("add supports only integer")
+            let args = vec![val2.clone()];
+            mrb_funcall(vm, Some(val1.clone()), "+", &args).expect("cannot call + for this receiver")
         }
     };
-    vm.current_regs()[a].replace(Rc::new(result));
+    vm.current_regs()[a].replace(result);
 }
 
 pub(crate) fn op_addi(vm: &mut VM, operand: &Fetched) {
@@ -1193,10 +1211,10 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
     let a = a as usize;
     let b = b as usize;
     let mut hash = HashMap::new();
-    for i in 0..(b*2) {
+    for i in 0..b {
         let key = vm.current_regs()[a + i * 2].clone().unwrap();
         let val = vm.current_regs()[a + i * 2 + 1].clone().unwrap();
-        hash.insert(key.as_hash_key(), val);
+        hash.insert(key.as_hash_key().expect("Not a hash key type"), (key, val));
     }
     let val = RObject::hash(hash);
     vm.current_regs()[a as usize].replace(Rc::new(val));

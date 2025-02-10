@@ -38,7 +38,7 @@ fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error
         _ => {}        
     }
 
-    let obj = Rc::new(RObject {
+    let obj = RObject {
         tt: RType::Instance,
         value: RValue::Instance(RInstance{
             class: class.clone(),
@@ -46,7 +46,8 @@ fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error
             data: Vec::new(),
             ref_count: 1,
         }),
-    });
+        object_id: u64::MAX.into(),
+    }.to_refcount_assigned();
 
     mrb_funcall(vm, Some(obj.clone()), "initialize", args)?;
 

@@ -4,10 +4,8 @@ use crate::{yamrb::{helpers::{mrb_define_cmethod, mrb_funcall}, value::*, vm::VM
 
 pub(crate) fn initialize_object(vm: &mut VM) {
     let object_class = vm.object_class.clone();
-    vm.consts.insert("Object".to_string(), Rc::new(RObject {
-        tt: RType::Class,
-        value: RValue::Class(object_class.clone()),
-    }));
+    let klass: RObject = object_class.clone().into();
+    vm.consts.insert("Object".to_string(), klass.to_refcount_assigned());
     vm.builtin_class_table.insert("Object", object_class.clone());
 
     #[cfg(feature = "wasi")]

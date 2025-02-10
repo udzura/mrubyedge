@@ -18,13 +18,14 @@ pub(crate) fn initialize_shared_memory(vm: &mut VM) {
 
 pub fn mrb_shared_memory_new(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let size: u64 = args[0].as_ref().try_into().expect("arg[0] must be integer");
-    let obj = Rc::new(RObject {
+    let obj = RObject {
         tt: RType::SharedMemory,
         value: RValue::SharedMemory(Rc::new(RefCell::new(
             SharedMemory::new(size as usize),
         ))),
-    });
-    Ok(obj)
+        object_id: u64::MAX.into()
+    };
+    Ok(obj.to_refcount_assigned())
 }
 
 fn mrb_shared_memory_offset_in_memory(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -79,7 +80,7 @@ fn mrb_shared_memory_to_string(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<
         }
     };
     let range = sm.borrow().memory.as_ref().to_vec();
-    Ok(Rc::new(RObject::string_from_vec(range)))
+    Ok(RObject::string_from_vec(range).to_refcount_assigned())
 }
 
 fn mrb_shared_memory_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -105,7 +106,7 @@ fn mrb_shared_memory_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc
         }
     };
     let range = sm.borrow().memory.as_ref()[(start as usize)..=(end as usize)].to_vec();
-    Ok(Rc::new(RObject::string_from_vec(range)))
+    Ok(RObject::string_from_vec(range).to_refcount_assigned())
 }
 
 // SharedMemory#read_by_size(size: Integer, offset: Integer) -> Integer

@@ -129,15 +129,16 @@ impl VM {
     pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
         let class = self.object_class.clone();
         // Insert top_self
-        let top_self = Rc::new(RObject{
+        let top_self = RObject{
             tt: RType::Instance,
             value: RValue::Instance(RInstance {
                 class,
                 ivar: RefCell::new(HashMap::new()),
                 data: Vec::new(),
                 ref_count: 1,
-            })
-        });
+            }),
+            object_id: 0.into(),
+        }.to_refcount_assigned();
         if self.current_regs()[0].is_none() {
             self.current_regs()[0].replace(top_self.clone());
         }
@@ -201,10 +202,7 @@ impl VM {
         let class = Rc::new(
             RClass::new(name, Some(superclass)),
         );
-        let object = Rc::new(RObject {
-            tt: RType::Class,
-            value: RValue::Class(class.clone()),
-        });
+        let object = RObject::class(class.clone()).to_refcount_assigned();
         self.consts.insert(name.to_string(), object);
         class
     }

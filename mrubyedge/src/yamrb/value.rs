@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::Error;
@@ -51,10 +52,23 @@ pub enum ValueHasher {
     Class(String),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValueEquality {
+    Bool(bool),
+    Integer(i64),
+    Float(f64),
+    Symbol(String),
+    String(Vec<u8>),
+    Class(String),
+    ObjectID(u64),
+    Nil,
+}
+
 #[derive(Debug, Clone)]
 pub struct RObject {
     pub tt: RType,
-    pub value: RValue
+    pub value: RValue,
+    pub object_id: Cell<u64>,
 }
 
 impl RObject {
@@ -62,6 +76,7 @@ impl RObject {
         RObject {
             tt: RType::Nil,
             value: RValue::Nil,
+            object_id: 4.into(),
         }
     }
 
@@ -69,6 +84,7 @@ impl RObject {
         RObject {
             tt: RType::Bool,
             value: RValue::Bool(b),
+            object_id: (if b { 20 } else { 0 }).into(),
         }
     }
 
@@ -76,6 +92,7 @@ impl RObject {
         RObject {
             tt: RType::Symbol,
             value: RValue::Symbol(sym),
+            object_id: 2.into(), // TODO: calc the same id for the same symbol
         }
     }
 
@@ -83,6 +100,7 @@ impl RObject {
         RObject {
             tt: RType::Integer,
             value: RValue::Integer(n),
+            object_id: (n as u64 * 2 + 1).into(),
         }
     }
 
@@ -90,6 +108,7 @@ impl RObject {
         RObject {
             tt: RType::Float,
             value: RValue::Float(f),
+            object_id: (f.to_bits() as u64).into(),
         }
     }
 
@@ -97,6 +116,7 @@ impl RObject {
         RObject {
             tt: RType::String,
             value: RValue::String(RefCell::new(s.into_bytes())),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -104,6 +124,7 @@ impl RObject {
         RObject {
             tt: RType::String,
             value: RValue::String(RefCell::new(v)),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -111,6 +132,7 @@ impl RObject {
         RObject {
             tt: RType::Array,
             value: RValue::Array(RefCell::new(v)),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -118,6 +140,7 @@ impl RObject {
         RObject {
             tt: RType::Hash,
             value: RValue::Hash(RefCell::new(h)),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -125,7 +148,17 @@ impl RObject {
         RObject {
             tt: RType::Class,
             value: RValue::Class(c),
+            object_id: (u64::MAX).into(),
         }
+    }
+
+    pub fn to_refcount_assigned(self) -> Rc<Self> {
+        let rc = Rc::new(self);
+        let id = Rc::as_ptr(&rc) as u64;
+        if rc.object_id.get() != u64::MAX {
+            rc.object_id.set(id);
+        }
+        rc
     }
 
     pub fn is_falsy(&self) -> bool {
@@ -400,10 +433,7 @@ impl RClass {
 
 impl From<Rc<RClass>> for RObject {
     fn from(value: Rc<RClass>) -> Self {
-        RObject {
-            tt: RType::Class,
-            value: RValue::Class(value),
-        }
+        RObject::class(value)
     }
 }
 

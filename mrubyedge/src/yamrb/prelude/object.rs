@@ -15,7 +15,10 @@ pub(crate) fn initialize_object(vm: &mut VM) {
     }
 
     mrb_define_cmethod(vm, object_class.clone(), "initialize", Box::new(mrb_object_initialize));
+    mrb_define_cmethod(vm, object_class.clone(), "==", Box::new(mrb_object_double_eq));
     mrb_define_cmethod(vm, object_class.clone(), "===", Box::new(mrb_object_triple_eq));
+    mrb_define_cmethod(vm, object_class.clone(), "object_id", Box::new(mrb_object_object_id));
+    mrb_define_cmethod(vm, object_class.clone(), "__id__", Box::new(mrb_object_object_id));
 
     // define global consts:
     vm.consts.insert("RUBY_VERSION".to_string(), Rc::new(RObject::string(crate::yamrb::vm::VERSION.to_string())));
@@ -48,6 +51,20 @@ pub fn mrb_kernel_debug(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject
         dbg!(i, obj.clone());
     }
     Ok(Rc::new(RObject::nil()))
+}
+
+pub fn mrb_object_is_equal(_vm: &mut VM, lhs: Rc<RObject>, rhs: Rc<RObject>) -> Rc<RObject> {
+    RObject::boolean(lhs.as_eq_value() == rhs.as_eq_value()).to_refcount_assigned()
+}
+
+pub fn mrb_object_is_not_equal(_vm: &mut VM, lhs: Rc<RObject>, rhs: Rc<RObject>) -> Rc<RObject> {
+    RObject::boolean(lhs.as_eq_value() != rhs.as_eq_value()).to_refcount_assigned()
+}
+
+pub fn mrb_object_double_eq(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let lhs = vm.getself();
+    let rhs = args[0].clone();
+    Ok(mrb_object_is_equal(vm, lhs, rhs))
 }
 
 pub fn mrb_object_triple_eq(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -89,6 +106,13 @@ pub fn mrb_object_triple_eq(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObj
     }
 }
 
+pub fn mrb_object_object_id(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    // Abstract method; do nothing
+    let x = vm.getself().as_ref().object_id.get();
+    // ref: https://stackoverflow.com/questions/74491204/how-do-i-represent-an-i64-in-the-u64-domain
+    let to_i64 = ((x as i64) ^ (1 << 63)) & (1 << 63) | (x & (u64::MAX >> 1)) as i64;
+    Ok(Rc::new(RObject::integer(to_i64)))
+}
 pub fn mrb_object_initialize(_vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     // Abstract method; do nothing
     Ok(Rc::new(RObject::nil()))

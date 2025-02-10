@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use crate::rite::insn::{Fetched, OpCode};
 
+use super::prelude::object::mrb_object_is_equal;
 use super::{helpers::mrb_funcall, value::*, vm::*};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
@@ -1097,17 +1098,10 @@ pub(crate) fn op_le(vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_eq(vm: &mut VM, operand: &Fetched) {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
-    let val1 = vm.current_regs()[a].take().unwrap();
-    let val2 = vm.current_regs()[b].take().unwrap();
-    let result = match (&val1.value, &val2.value) {
-        (RValue::Integer(n1), RValue::Integer(n2)) => {
-            RObject::boolean(n1 == n2)
-        }
-        _ => {
-            unreachable!("eq supports only integer")
-        }
-    };
-    vm.current_regs()[a].replace(Rc::new(result));
+    let lhs = vm.current_regs()[a].take().unwrap();
+    let rhs = vm.current_regs()[b].take().unwrap();
+    let result = mrb_object_is_equal(vm, lhs, rhs);
+    vm.current_regs()[a].replace(result);
 }
 
 pub(crate) fn op_gt(vm: &mut VM, operand: &Fetched) {

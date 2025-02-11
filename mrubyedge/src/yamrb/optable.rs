@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use crate::rite::insn::{Fetched, OpCode};
 
+use super::prelude::object::mrb_object_is_equal;
 use super::{helpers::mrb_funcall, value::*, vm::*};
 
 // OpCodes of mruby 3.2.0 from mruby/op.h:
@@ -1097,17 +1098,10 @@ pub(crate) fn op_le(vm: &mut VM, operand: &Fetched) {
 pub(crate) fn op_eq(vm: &mut VM, operand: &Fetched) {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
-    let val1 = vm.current_regs()[a].take().unwrap();
-    let val2 = vm.current_regs()[b].take().unwrap();
-    let result = match (&val1.value, &val2.value) {
-        (RValue::Integer(n1), RValue::Integer(n2)) => {
-            RObject::boolean(n1 == n2)
-        }
-        _ => {
-            unreachable!("eq supports only integer")
-        }
-    };
-    vm.current_regs()[a].replace(Rc::new(result));
+    let lhs = vm.current_regs()[a].take().unwrap();
+    let rhs = vm.current_regs()[b].take().unwrap();
+    let result = mrb_object_is_equal(vm, lhs, rhs);
+    vm.current_regs()[a].replace(result);
 }
 
 pub(crate) fn op_gt(vm: &mut VM, operand: &Fetched) {
@@ -1246,8 +1240,9 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
             environ: Some(environ),
             block_self: Some(vm.getself()),
         }),
+        object_id: u64::MAX.into(),
     };
-    vm.current_regs()[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
 }
 
 pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
@@ -1274,8 +1269,9 @@ pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
             environ: Some(environ),
             block_self: Some(vm.getself()),
         }),
+        object_id: u64::MAX.into(),
     };
-    vm.current_regs()[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
 }
 
 pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
@@ -1292,8 +1288,9 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
             environ: None,
             block_self: None,
         }),
+        object_id: u64::MAX.into(),
     };
-    vm.current_regs()[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
 }
 
 pub(crate) fn op_range_inc(vm: &mut VM, operand: &Fetched) {
@@ -1312,8 +1309,9 @@ fn do_op_range(vm: &mut VM, a: usize, b: usize, exclusive: bool) {
     let val = RObject {
         tt: super::value::RType::Range,
         value: super::value::RValue::Range(val1, val2, exclusive),
+        object_id: u64::MAX.into(),
     };
-    vm.current_regs()[a as usize].replace(Rc::new(val));
+    vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
 }
 
 pub(crate) fn op_oclass(vm: &mut VM, operand: &Fetched) {
@@ -1374,20 +1372,14 @@ pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
     } else {
         unreachable!("DEF must be called on class");
     }
-    vm.current_regs()[a as usize].replace(Rc::new(RObject {
-        tt: super::value::RType::Symbol,
-        value: super::value::RValue::Symbol(sym),
-    }));
+    vm.current_regs()[a as usize].replace(RObject::symbol(sym).to_refcount_assigned());
 }
 
 pub(crate) fn op_tclass(vm: &mut VM, operand: &Fetched) {
     let a = operand.as_b().unwrap() as usize;
     let klass = vm.object_class.clone();
-    let val = RObject {
-        tt: super::value::RType::Class,
-        value: super::value::RValue::Class(klass),
-    };
-    vm.current_regs()[a].replace(Rc::new(val));
+    let val: RObject = klass.into();
+    vm.current_regs()[a].replace(val.to_refcount_assigned());
 } 
 
 pub(crate) fn op_stop(vm: &mut VM, _operand: &Fetched) {

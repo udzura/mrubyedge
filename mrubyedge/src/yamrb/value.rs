@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::collections::HashSet;
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::Error;
@@ -51,10 +53,43 @@ pub enum ValueHasher {
     Class(String),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValueEquality {
+    Bool(bool),
+    Integer(i64),
+    Float(f64),
+    Symbol(String),
+    String(Vec<u8>),
+    Class(String),
+    Range(Box<ValueEquality>, Box<ValueEquality>, bool),
+    Array(Vec<ValueEquality>),
+    KeyValue(ValueEqualityForKeyValue),
+    ObjectID(u64),
+    Nil,
+}
+
+#[derive(Debug, Clone)]
+pub struct ValueEqualityForKeyValue(HashSet<ValueHasher>, HashMap<ValueHasher, ValueEquality>);
+
+impl PartialEq for ValueEqualityForKeyValue {
+    fn eq(&self, other: &Self) -> bool {
+        if self.0 != other.0 {
+            return false;
+        }
+        for key in self.0.iter() {
+            if self.1.get(key) != other.1.get(key) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RObject {
     pub tt: RType,
-    pub value: RValue
+    pub value: RValue,
+    pub object_id: Cell<u64>,
 }
 
 impl RObject {
@@ -62,6 +97,7 @@ impl RObject {
         RObject {
             tt: RType::Nil,
             value: RValue::Nil,
+            object_id: 4.into(),
         }
     }
 
@@ -69,6 +105,7 @@ impl RObject {
         RObject {
             tt: RType::Bool,
             value: RValue::Bool(b),
+            object_id: (if b { 20 } else { 0 }).into(),
         }
     }
 
@@ -76,13 +113,23 @@ impl RObject {
         RObject {
             tt: RType::Symbol,
             value: RValue::Symbol(sym),
+            object_id: 2.into(), // TODO: calc the same id for the same symbol
         }
     }
 
     pub fn integer(n: i64) -> Self {
+        let object_id = if n >= (i32::MAX as i64) {
+            u64::MAX
+        } else if n <= (i32::MIN as i64) {
+            u64::MAX
+        } else {
+            n as u64 * 2 + 1
+        };
+
         RObject {
             tt: RType::Integer,
             value: RValue::Integer(n),
+            object_id: object_id.into(),
         }
     }
 
@@ -90,6 +137,7 @@ impl RObject {
         RObject {
             tt: RType::Float,
             value: RValue::Float(f),
+            object_id: (f.to_bits() as u64).into(),
         }
     }
 
@@ -97,6 +145,7 @@ impl RObject {
         RObject {
             tt: RType::String,
             value: RValue::String(RefCell::new(s.into_bytes())),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -104,6 +153,7 @@ impl RObject {
         RObject {
             tt: RType::String,
             value: RValue::String(RefCell::new(v)),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -111,6 +161,7 @@ impl RObject {
         RObject {
             tt: RType::Array,
             value: RValue::Array(RefCell::new(v)),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -118,6 +169,15 @@ impl RObject {
         RObject {
             tt: RType::Hash,
             value: RValue::Hash(RefCell::new(h)),
+            object_id: (u64::MAX).into(),
+        }
+    }
+
+    pub fn range(start: Rc<RObject>, end: Rc<RObject>, exclusive: bool) -> Self {
+        RObject {
+            tt: RType::Range,
+            value: RValue::Range(start, end, exclusive),
+            object_id: (u64::MAX).into(),
         }
     }
 
@@ -125,7 +185,30 @@ impl RObject {
         RObject {
             tt: RType::Class,
             value: RValue::Class(c),
+            object_id: (u64::MAX).into(),
         }
+    }
+
+    pub fn instance(c: Rc<RClass>) -> Self {
+        RObject {
+            tt: RType::Instance,
+            value: RValue::Instance(RInstance {
+                class: c,
+                ivar: RefCell::new(HashMap::new()),
+                data: Vec::new(),
+                ref_count: 1,
+            }),
+            object_id: (u64::MAX).into(),
+        }
+    }
+
+    pub fn to_refcount_assigned(self) -> Rc<Self> {
+        let rc = Rc::new(self);
+        let id = Rc::as_ptr(&rc) as u64;
+        if rc.object_id.get() == u64::MAX {
+            rc.object_id.set(id);
+        }
+        rc
     }
 
     pub fn is_falsy(&self) -> bool {
@@ -161,6 +244,39 @@ impl RObject {
             RValue::Class(c) => Ok(ValueHasher::Class(c.sym_id.name.clone())),
             _ => {
                 Err(Error::TypeMismatch)
+            }
+        }
+    }
+
+    pub fn as_eq_value(&self) -> ValueEquality {
+        match &self.value {
+            RValue::Bool(b) => ValueEquality::Bool(*b),
+            RValue::Integer(i) => ValueEquality::Integer(*i),
+            RValue::Float(f) => ValueEquality::Float(*f),
+            RValue::Symbol(s) => ValueEquality::Symbol(s.name.clone()),
+            RValue::String(s) => ValueEquality::String(s.borrow().clone()),
+            RValue::Class(c) => ValueEquality::Class(c.sym_id.name.clone()),
+            RValue::Range(s, e, ex) => {
+                ValueEquality::Range(
+                    Box::new(s.as_eq_value()),
+                    Box::new(e.as_eq_value()),
+                    *ex
+                )
+            },
+            RValue::Array(a) => {
+                let arr = a.borrow().iter().map(|v| v.as_eq_value()).collect();
+                ValueEquality::Array(arr)
+            },
+            RValue::Hash(ha) => {
+                let keys: HashSet<_> = ha.borrow().keys().map(|k| k.clone()).collect();
+                ValueEquality::KeyValue(ValueEqualityForKeyValue(
+                    keys,
+                    ha.borrow().iter().map(|(k, (_, v))| (k.clone(), v.as_ref().as_eq_value())).collect(),
+                ))
+            },
+            RValue::Nil => ValueEquality::Nil,
+            _ => {
+                ValueEquality::ObjectID(self.object_id.get())
             }
         }
     }
@@ -400,10 +516,7 @@ impl RClass {
 
 impl From<Rc<RClass>> for RObject {
     fn from(value: Rc<RClass>) -> Self {
-        RObject {
-            tt: RType::Class,
-            value: RValue::Class(value),
-        }
+        RObject::class(value)
     }
 }
 

@@ -12,10 +12,10 @@ pub(crate) fn initialize_hash(vm: &mut VM) {
 
 fn mrb_hash_get_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let this = vm.getself();
-    mrb_hash_get_index(this, args)
+    mrb_hash_get_index(this, args[0].clone())
 }
 
-pub fn mrb_hash_get_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+pub fn mrb_hash_get_index(this: Rc<RObject>, key: Rc<RObject>) -> Result<Rc<RObject>, Error> {
     let hash = match &this.value {
         RValue::Hash(a) => a.clone(),
         _ => {
@@ -23,7 +23,7 @@ pub fn mrb_hash_get_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<
         }
     };
     let hash = hash.borrow();
-    let key  = args[0].as_ref().as_hash_key()?;
+    let key  = key.as_ref().as_hash_key()?;
     match hash.get(&key).clone() {
         Some((_, value)) => Ok(value.clone()),
         None => Ok(Rc::new(RObject::nil())),
@@ -32,10 +32,12 @@ pub fn mrb_hash_get_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<
 
 fn mrb_hash_set_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let this = vm.getself();
-    mrb_hash_set_index(this, args)
+    let key = args[0].clone();
+    let value = args[1].clone();
+    mrb_hash_set_index(this, key, value)
 }
 
-pub fn mrb_hash_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+pub fn mrb_hash_set_index(this: Rc<RObject>, key: Rc<RObject>, value: Rc<RObject>) -> Result<Rc<RObject>, Error> {
     let hash = match &this.value {
         RValue::Hash(a) => a,
         _ => {
@@ -43,10 +45,8 @@ pub fn mrb_hash_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<
         }
     };
     let mut hash = hash.borrow_mut();
-    let key = args[0].clone();
     let hashed  = key.as_hash_key()?;
-    let value = &args[1];
-    hash.insert(hashed, (key, value.clone()));
+    hash.insert(hashed, (key.clone(), value.clone()));
     Ok(value.clone())
 }
 
@@ -96,13 +96,11 @@ fn test_mrb_hash_set_and_index() {
 
     for (i, key) in keys.iter().enumerate() {
         let value = &values[i];
-        let args = vec![key.clone(), value.clone()];
-        mrb_hash_set_index(hash.clone(), &args).expect("set index failed");
+        mrb_hash_set_index(hash.clone(), key.clone(), value.clone()).expect("set index failed");
     }
 
     for (i, key) in keys.iter().enumerate() {
-        let get_args = vec![key.clone()];
-        let value = mrb_hash_get_index(hash.clone(), &get_args).expect("getting index failed");
+        let value = mrb_hash_get_index(hash.clone(), key.clone()).expect("getting index failed");
         let value: i64 = value.as_ref().try_into().expect("value is not integer");
         let expected: i64 = values[i].as_ref().try_into().expect("expected is not integer");
         assert_eq!(value, expected);
@@ -119,13 +117,11 @@ fn test_mrb_hash_set_and_index_not_found() {
     let hash = Rc::new(RObject::hash(HashMap::new()));
     let key = Rc::new(RObject::string("key".to_string()));
     let value = Rc::new(RObject::integer(42));
-    let args = vec![key.clone(), value.clone()];
 
-    mrb_hash_set_index(hash.clone(), &args).expect("set index failed");
+    mrb_hash_set_index(hash.clone(), key.clone(), value.clone()).expect("set index failed");
 
     let key = Rc::new(RObject::string("key2".to_string()));
-    let get_args = vec![key.clone()];
-    let value = mrb_hash_get_index(hash.clone(), &get_args).expect("getting index failed");
+    let value = mrb_hash_get_index(hash.clone(), key.clone()).expect("getting index failed");
     let value = value.as_ref();
     assert!(value.is_nil());
 }

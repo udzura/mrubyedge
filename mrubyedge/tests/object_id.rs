@@ -6,7 +6,7 @@ use helpers::*;
 
 #[test]
 fn object_id_test() {
-    let code = "def myid
+    let code = "def check_id
       o = Object.new
       puts \"#{o.object_id}\"
       o2 = o
@@ -20,13 +20,13 @@ fn object_id_test() {
 
     // Assert
     let args = vec![];
-    let result: bool = mrb_funcall(&mut vm, None, "myid", &args).unwrap().as_ref().try_into().unwrap();
+    let result: bool = mrb_funcall(&mut vm, None, "check_id", &args).unwrap().as_ref().try_into().unwrap();
     assert!(result);
 }
 
 #[test]
 fn object_id_2_test() {
-    let code = "def myid
+    let code = "def check_id
       o = Object.new
       puts \"#{o.object_id}\"
       o2 = Object.new
@@ -42,6 +42,6 @@ fn object_id_2_test() {
 
     // Assert
     let args = vec![];
-    let result: bool = mrb_funcall(&mut vm, None, "myid", &args).unwrap().as_ref().try_into().unwrap();
+    let result: bool = mrb_funcall(&mut vm, None, "check_id", &args).unwrap().as_ref().try_into().unwrap();
     assert!(!result);
 }

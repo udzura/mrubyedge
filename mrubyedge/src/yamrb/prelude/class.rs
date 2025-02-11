@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
 use crate::{yamrb::{helpers::{mrb_define_cmethod, mrb_funcall}, value::*, vm::VM}, Error};
 
@@ -38,16 +38,7 @@ fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error
         _ => {}        
     }
 
-    let obj = RObject {
-        tt: RType::Instance,
-        value: RValue::Instance(RInstance{
-            class: class.clone(),
-            ivar: RefCell::new(HashMap::new()),
-            data: Vec::new(),
-            ref_count: 1,
-        }),
-        object_id: u64::MAX.into(),
-    }.to_refcount_assigned();
+    let obj = RObject::instance(class).to_refcount_assigned();
 
     mrb_funcall(vm, Some(obj.clone()), "initialize", args)?;
 

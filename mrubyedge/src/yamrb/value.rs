@@ -173,10 +173,31 @@ impl RObject {
         }
     }
 
+    pub fn range(start: Rc<RObject>, end: Rc<RObject>, exclusive: bool) -> Self {
+        RObject {
+            tt: RType::Range,
+            value: RValue::Range(start, end, exclusive),
+            object_id: (u64::MAX).into(),
+        }
+    }
+
     pub fn class(c: Rc<RClass>) -> Self {
         RObject {
             tt: RType::Class,
             value: RValue::Class(c),
+            object_id: (u64::MAX).into(),
+        }
+    }
+
+    pub fn instance(c: Rc<RClass>) -> Self {
+        RObject {
+            tt: RType::Instance,
+            value: RValue::Instance(RInstance {
+                class: c,
+                ivar: RefCell::new(HashMap::new()),
+                data: Vec::new(),
+                ref_count: 1,
+            }),
             object_id: (u64::MAX).into(),
         }
     }

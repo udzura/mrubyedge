@@ -21,7 +21,7 @@ fn attr_reader_test() {
       w.world
     end
     ";
-    let binary = mrbc_compile_debug("attr_reader", code);
+    let binary = mrbc_compile("attr_reader", code);
     let mut rite = mrubyedge::rite::load(&binary).unwrap();
     let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
     vm.run().unwrap();

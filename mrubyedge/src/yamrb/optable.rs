@@ -786,6 +786,8 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
     let method = klass.find_method(&method_id.name).expect(
         &format!("method {} not found. TODO: medthod_missing", &method_id.name),
     );
+
+    vm.current_regs()[a as usize].replace(recv.clone());
     if !method.is_rb_func {
         let func = vm.get_fn(method.func.unwrap()).unwrap();
         vm.current_regs_offset += a as usize;
@@ -808,7 +810,6 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
         return
     }
 
-    vm.current_regs()[a as usize].replace(recv.clone());
     push_callinfo(vm, method_id, c as usize);
 
     vm.pc.set(0);

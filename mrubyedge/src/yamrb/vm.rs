@@ -28,6 +28,7 @@ pub struct VM {
     pub current_callinfo: Option<Rc<CALLINFO>>,
     pub target_class: Rc<RClass>,
     pub error_code: u32,
+    pub exception: Option<Rc<RException>>,
 
     pub flag_preemption: Cell<bool>,
 
@@ -93,6 +94,7 @@ impl VM {
         let current_callinfo = None;
         let target_class = object_class.clone();
         let error_code = 0;
+        let exception = None;
         let flag_preemption = Cell::new(false);
         let fn_table = Vec::new();
         let upper = None;
@@ -110,6 +112,7 @@ impl VM {
             current_callinfo,
             target_class,
             error_code,
+            exception,
             flag_preemption,
             object_class,
             builtin_class_table,

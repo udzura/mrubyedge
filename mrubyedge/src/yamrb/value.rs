@@ -22,6 +22,7 @@ pub enum RType {
     Range,
     SharedMemory,
     Data,
+    Exception,
     Nil,
 }
 
@@ -40,6 +41,7 @@ pub enum RValue {
     Range(Rc<RObject>, Rc<RObject>, bool),
     SharedMemory(Rc<RefCell<SharedMemory>>),
     Data,
+    Exception(Rc<RException>),
     Nil,
 }
 
@@ -302,6 +304,7 @@ impl RObject {
             RValue::Range(_, _, _) => vm.get_class_by_name("Range"),
             RValue::SharedMemory(_) => vm.get_class_by_name("SharedMemory"),
             RValue::Data => todo!("return ...? class"),
+            RValue::Exception(e) => e.class.clone(),
             RValue::Nil => vm.get_class_by_name("NilClass"),
         }
     }
@@ -573,6 +576,33 @@ impl RPool {
         match self {
             RPool::Str(s) => s,
             _ => unreachable!("RPool is not a string...?"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RException {
+    pub class: Rc<RClass>,
+    pub error_type: RefCell<Error>,
+    pub message: String,
+    pub backtrace: Vec<String>, // TODO
+}
+
+impl RClass {
+    pub fn from_error(vm: &mut VM, _e: &Error) -> Self {
+        // TODO: branch by error type
+        RClass::new("StandardError", Some(vm.object_class.clone()))
+    }
+    
+}
+
+impl RException {
+    pub fn from_error(vm: &mut VM, e: &Error) -> Self {
+        RException {
+            class: Rc::new(RClass::from_error(vm, e)),
+            error_type: RefCell::new(e.clone()),
+            message: "Error occurred".to_string(),
+            backtrace: Vec::new(),
         }
     }
 }

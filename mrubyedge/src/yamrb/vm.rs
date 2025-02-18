@@ -143,8 +143,14 @@ impl VM {
             self.current_regs()[0].replace(top_self.clone());
         }
         loop {
-            if let Some(e) = &self.exception {
-                eprintln!("TODO: Exception: {:?}", e);
+            if let Some(e) = self.exception.clone() {
+                let operand = insn::Fetched::B(0);
+                op_return(self, &operand)?;
+                if self.flag_preemption.get() {
+                    break;
+                } else {
+                    return Err(Box::new(e.error_type.borrow().clone()));
+                }
             }
 
             let pc = self.pc.get();

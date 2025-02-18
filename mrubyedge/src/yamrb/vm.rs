@@ -164,7 +164,7 @@ impl VM {
                 Err(e) => {
                     let exception = RException::from_error(self, &e);
                     self.exception = Some(Rc::new(exception));
-                    break;
+                    continue;
                 }
             }
 

@@ -22,6 +22,7 @@ pub(crate) fn initialize_object(vm: &mut VM) {
     mrb_define_cmethod(vm, object_class.clone(), "__id__", Box::new(mrb_object_object_id));
     mrb_define_cmethod(vm, object_class.clone(), "to_s", Box::new(mrb_object_to_s));
     mrb_define_cmethod(vm, object_class.clone(), "inspect", Box::new(mrb_object_to_s));
+    mrb_define_cmethod(vm, object_class.clone(), "raise", Box::new(mrb_object_raise));
 
     // define global consts:
     vm.consts.insert("RUBY_VERSION".to_string(), Rc::new(RObject::string(crate::yamrb::vm::VERSION.to_string())));

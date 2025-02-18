@@ -69,3 +69,20 @@ impl IrepRecord {
         plain::from_bytes(buf).map_err(|_| Error::General).cloned()
     }
 }
+
+#[repr(C)]
+#[derive(Debug, Clone, Default)]
+pub struct IrepCatchHandler {
+    pub type_: u8,
+    pub begin: [u8; 4],
+    pub end: [u8; 4],
+    pub target: [u8; 4],
+}
+
+unsafe impl Plain for IrepCatchHandler {}
+
+impl IrepCatchHandler {
+    pub fn from_bytes(buf: &[u8]) -> Result<Self, Error> {
+        plain::from_bytes(buf).map_err(|_| Error::General).cloned()
+    }
+}  

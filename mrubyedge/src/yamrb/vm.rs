@@ -144,6 +144,7 @@ impl VM {
         }
         loop {
             if let Some(e) = self.exception.clone() {
+                dbg!("detect err", &e.message);
                 let operand = insn::Fetched::B(0);
                 op_return(self, &operand)?;
                 if self.flag_preemption.get() {

@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::yamrb::{value::*, vm::VM};
+use crate::{yamrb::{helpers::mrb_define_cmethod, value::*, vm::VM}, Error};
 
 pub(crate) fn initialize_exception(vm: &mut VM) {
     let exp_class: Rc<RClass> = vm.define_standard_class("Exception");
@@ -19,4 +19,19 @@ pub(crate) fn initialize_exception(vm: &mut VM) {
     let _ = vm.define_standard_class_under("SystemStackError", exp_class.clone());
     let _ = vm.define_standard_class_under("SystemCallError", std_exp_class.clone());
     let _ = vm.define_standard_class_under("NoMethodEArror", std_exp_class.clone());
+
+    mrb_define_cmethod(vm, exp_class, "message", Box::new(mrb_exception_message));
+}
+
+pub fn mrb_exception_message(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let exp = vm.getself();
+    match &exp.value {
+        RValue::Exception(e) => {
+            let message = e.as_ref().message.clone();
+            Ok(RObject::string(message).to_refcount_assigned())
+        },
+        _ => {
+            Err(Error::RuntimeError("Exception#message must be called on an Exception".to_string()))
+        }
+    }
 }

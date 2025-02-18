@@ -27,6 +27,7 @@ pub struct Irep<'a> {
     pub strvals: Vec<CString>,
     pub slen: usize,
     pub syms: Vec<CString>,
+    pub catch_handlers: Vec<CatchHandler>,
 }
 
 impl Irep<'_> {
@@ -45,6 +46,14 @@ impl Irep<'_> {
     pub fn clen(&self) -> usize {
         be16_to_u16(self.header.clen) as usize
     }
+}
+
+#[derive(Debug)]
+pub struct CatchHandler {
+    pub type_: u8,
+    pub start: usize,
+    pub end: usize,
+    pub target: usize,
 }
 
 #[derive(Debug)]
@@ -113,7 +122,7 @@ pub fn load<'a>(src: &'a [u8]) -> Result<Rite<'a>, Error> {
 }
 
 pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep>), Error> {
-    let mut cur = 0;
+let mut cur = 0;
 
     let irep_header_size = mem::size_of::<SectionIrepHeader>();
     let irep_header = SectionIrepHeader::from_bytes(&head[cur..irep_header_size])?;
@@ -142,10 +151,29 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep
 
         cur += ilen;
 
+        let mut catch_handlers = Vec::<CatchHandler>::new();
+        let clen = be16_to_u16(irep_record.clen) as usize;
+        if clen > 0 {
+            for _ in 0..clen {
+                let value = CatchHandler {
+                    type_: head[cur],
+                    start: be32_to_u32([head[cur + 1], head[cur + 2], head[cur + 3], head[cur + 4]])
+                        as usize,
+                    end: be32_to_u32([head[cur + 5], head[cur + 6], head[cur + 7], head[cur + 8]])
+                        as usize,
+                    target: be32_to_u32([head[cur + 9], head[cur + 10], head[cur + 11], head[cur + 12]])
+                        as usize,
+                };
+                catch_handlers.push(value);
+                cur += mem::size_of::<IrepCatchHandler>();
+            }
+        }
+
         // pool
         let data = &head[cur..cur + 2];
         let plen = be16_to_u16([data[0], data[1]]) as usize;
         cur += 2;
+
         for _ in 0..plen {
             let typ = head[cur];
             match typ {
@@ -159,8 +187,8 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep
                     strvals.push(strval.to_owned());
                     cur += strlen;
                 }
-                _ => {
-                    unimplemented!("require more support pool type");
+                v => {
+                    unimplemented!("require more support pool type {}", v);
                 }
             }
         }
@@ -188,6 +216,7 @@ pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep
             strvals,
             slen,
             syms,
+            catch_handlers,
         };
         ireps.push(irep);
     }

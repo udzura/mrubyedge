@@ -80,20 +80,14 @@ pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: &str, args:
     if method.is_rb_func {
         call_block(vm, method, recv.clone(), args)
     } else {
-        vm.current_regs_offset += 2;
+        vm.current_regs_offset += 2; // FIXME: magick number?
         vm.current_regs()[0].replace(recv.clone());
 
         let func = vm.fn_table[method.func.unwrap()].clone();
         let res = func(vm, &args);
         vm.current_regs_offset -= 2;
 
-        if res.is_err() {
-            vm.error_code = 255;
-        }
-        match res {
-            Ok(o) => Ok(o.clone()),
-            Err(e) => Err(e),
-        }
+        res
     }
 }
 

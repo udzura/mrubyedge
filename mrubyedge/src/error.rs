@@ -7,6 +7,7 @@ pub enum Error {
     InvalidOpCode,
     RuntimeError(String),
     TypeMismatch,
+    NoMethodError(String),
 }
 
 impl fmt::Display for Error {
@@ -16,3 +17,15 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {}
+
+impl Error {
+    pub fn message(&self) -> String{
+        match self {
+            Error::General => "General error".to_string(),
+            Error::InvalidOpCode => "Invalid opcode".to_string(),
+            Error::RuntimeError(msg) => msg.clone(),
+            Error::TypeMismatch => "Type mismatch".to_string(),
+            Error::NoMethodError(msg) => format!("Method not found: {}", msg),
+        }
+    }
+}

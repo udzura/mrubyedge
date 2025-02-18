@@ -132,6 +132,13 @@ pub fn mrb_object_to_s(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>
     Ok(Rc::new(RObject::string(format!("{:?}", obj))))
 }
 
+pub fn mrb_object_raise(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    // TODO: accept exception class
+    let msg = args[0].as_ref().try_into()?;
+    let err = Error::RuntimeError(msg);
+    Err(err)
+}
+
 pub fn mrb_object_initialize(_vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     // Abstract method; do nothing
     Ok(Rc::new(RObject::nil()))

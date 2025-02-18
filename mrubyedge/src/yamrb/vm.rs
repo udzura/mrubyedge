@@ -27,7 +27,6 @@ pub struct VM {
     pub current_regs_offset: usize,
     pub current_callinfo: Option<Rc<CALLINFO>>,
     pub target_class: Rc<RClass>,
-    pub error_code: u32,
     pub exception: Option<Rc<RException>>,
 
     pub flag_preemption: Cell<bool>,
@@ -93,7 +92,6 @@ impl VM {
         let current_regs_offset = 0;
         let current_callinfo = None;
         let target_class = object_class.clone();
-        let error_code = 0;
         let exception = None;
         let flag_preemption = Cell::new(false);
         let fn_table = Vec::new();
@@ -111,7 +109,6 @@ impl VM {
             current_regs_offset,
             current_callinfo,
             target_class,
-            error_code,
             exception,
             flag_preemption,
             object_class,
@@ -146,6 +143,10 @@ impl VM {
             self.current_regs()[0].replace(top_self.clone());
         }
         loop {
+            if let Some(e) = &self.exception {
+                eprintln!("TODO: Exception: {:?}", e);
+            }
+
             let pc = self.pc.get();
             if self.current_irep.code.len() <= pc {
                 // reached end of the IREP
@@ -158,7 +159,14 @@ impl VM {
             if env::var("MRUBYEDGE_DEBUG").is_ok() {
                 eprintln!("{:?}: {:?} (pos={} len={})", &op.code, &op.operand, op.pos, op.len);
             }
-            consume_expr(self, op.code, &operand, op.pos, op.len);
+            match consume_expr(self, op.code, &operand, op.pos, op.len) {
+                Ok(_) => {},
+                Err(e) => {
+                    let exception = RException::from_error(self, &e);
+                    self.exception = Some(Rc::new(exception));
+                    break;
+                }
+            }
 
             if self.flag_preemption.get() {
                 break;
@@ -212,6 +220,12 @@ impl VM {
 
     pub(crate) fn define_standard_class(&mut self, name: &'static str) -> Rc<RClass> {
         let class = self.define_class(name, None);
+        self.builtin_class_table.insert(name, class.clone());
+        class
+    }
+
+    pub(crate) fn define_standard_class_under(&mut self, name: &'static str, sklass: Rc<RClass>) -> Rc<RClass> {
+        let class = self.define_class(name, Some(sklass));
         self.builtin_class_table.insert(name, class.clone());
         class
     }

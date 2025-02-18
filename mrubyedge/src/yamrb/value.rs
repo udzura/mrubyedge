@@ -589,19 +589,33 @@ pub struct RException {
 }
 
 impl RClass {
-    pub fn from_error(vm: &mut VM, _e: &Error) -> Self {
-        // TODO: branch by error type
-        RClass::new("StandardError", Some(vm.object_class.clone()))
+    pub fn from_error(vm: &mut VM, e: &Error) -> Rc<Self> {
+        match e {
+            Error::General => {
+                return vm.get_class_by_name("Exception");
+            }
+            Error::InvalidOpCode => {
+                return vm.get_class_by_name("LoadError");
+            }
+            Error::RuntimeError(_) => {
+                return vm.get_class_by_name("RuntimeError");
+            }
+            Error::TypeMismatch => {
+                return vm.get_class_by_name("LoadError");
+            }
+            Error::NoMethodError(_) => {
+                return vm.get_class_by_name("NoMethodError");
+            }
+        }
     }
-    
 }
 
 impl RException {
     pub fn from_error(vm: &mut VM, e: &Error) -> Self {
         RException {
-            class: Rc::new(RClass::from_error(vm, e)),
+            class: RClass::from_error(vm, e),
             error_type: RefCell::new(e.clone()),
-            message: "Error occurred".to_string(),
+            message: e.message(),
             backtrace: Vec::new(),
         }
     }

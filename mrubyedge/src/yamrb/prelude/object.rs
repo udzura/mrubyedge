@@ -11,6 +11,7 @@ pub(crate) fn initialize_object(vm: &mut VM) {
     #[cfg(feature = "wasi")]
     {
         mrb_define_cmethod(vm, object_class.clone(), "puts", Box::new(mrb_kernel_puts));
+        mrb_define_cmethod(vm, object_class.clone(), "p", Box::new(mrb_kernel_p));
         mrb_define_cmethod(vm, object_class.clone(), "debug", Box::new(mrb_kernel_debug));
     }
 
@@ -19,6 +20,8 @@ pub(crate) fn initialize_object(vm: &mut VM) {
     mrb_define_cmethod(vm, object_class.clone(), "===", Box::new(mrb_object_triple_eq));
     mrb_define_cmethod(vm, object_class.clone(), "object_id", Box::new(mrb_object_object_id));
     mrb_define_cmethod(vm, object_class.clone(), "__id__", Box::new(mrb_object_object_id));
+    mrb_define_cmethod(vm, object_class.clone(), "to_s", Box::new(mrb_object_to_s));
+    mrb_define_cmethod(vm, object_class.clone(), "inspect", Box::new(mrb_object_to_s));
 
     // define global consts:
     vm.consts.insert("RUBY_VERSION".to_string(), Rc::new(RObject::string(crate::yamrb::vm::VERSION.to_string())));
@@ -28,7 +31,7 @@ pub(crate) fn initialize_object(vm: &mut VM) {
 }
 
 #[cfg(feature = "wasi")]
-pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+pub fn mrb_kernel_puts(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let msg = args[0].clone();
     match &msg.value {
         RValue::String(s) => {
@@ -38,10 +41,20 @@ pub fn mrb_kernel_puts(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>
             println!("{}", i);
         }
         _ => {
-            dbg!(&msg);
-            return Err(Error::RuntimeError("puts only accept string".to_string()));
+            let inspect = mrb_funcall(vm, Some(msg), "to_s", &[])?;
+            let inspect: String = inspect.as_ref().try_into()?;
+            println!("{}", inspect);
         }
     }
+    Ok(Rc::new(RObject::nil()))
+}
+
+#[cfg(feature = "wasi")]
+pub fn mrb_kernel_p(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let msg = args[0].clone();
+    let inspect = mrb_funcall(vm, Some(msg), "inspect", &[])?;
+    let inspect: String = inspect.as_ref().try_into()?;
+    println!("{}", inspect);
     Ok(Rc::new(RObject::nil()))
 }
 
@@ -113,6 +126,12 @@ pub fn mrb_object_object_id(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<ROb
     let to_i64 = ((x as i64) ^ (1 << 63)) & (1 << 63) | (x & (u64::MAX >> 1)) as i64;
     Ok(Rc::new(RObject::integer(to_i64)))
 }
+
+pub fn mrb_object_to_s(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let obj = vm.getself();
+    Ok(Rc::new(RObject::string(format!("{:?}", obj))))
+}
+
 pub fn mrb_object_initialize(_vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     // Abstract method; do nothing
     Ok(Rc::new(RObject::nil()))

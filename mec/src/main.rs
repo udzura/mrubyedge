@@ -2,7 +2,7 @@ extern crate bpaf;
 extern crate rand;
 extern crate mec_mrbc_sys;
 
-const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "1.0.3";
+const MRUBY_EDGE_DEFAULT_VERSION: &'static str = "1";
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 use std::{ffi::CStr, fs::File, io::Read, path::{Path, PathBuf}, process::Command, str};

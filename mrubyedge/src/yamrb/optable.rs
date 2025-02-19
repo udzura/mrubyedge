@@ -268,15 +268,15 @@ pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: us
         // JMPUW => {
         //     // op_jmpuw(vm, &operand)?;
         // }
-        // EXCEPT => {
-        //     // op_except(vm, &operand)?;
-        // }
-        // RESCUE => {
-        //     // op_rescue(vm, &operand)?;
-        // }
-        // RAISEIF => {
-        //     // op_raiseif(vm, &operand)?;
-        // }
+        EXCEPT => {
+            op_except(vm, &operand)?;
+        }
+        RESCUE => {
+            op_rescue(vm, &operand)?;
+        }
+        RAISEIF => {
+            op_raiseif(vm, &operand)?;
+        }
         SSEND => {
             op_ssend(vm, &operand)?;
         }
@@ -771,6 +771,47 @@ pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched, end_pos: usize) -> Resul
     Ok(())
 }
 
+pub(crate) fn op_except(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
+    let a = operand.as_b().unwrap();
+    let val = vm.exception.take().unwrap();
+    let exc = Rc::new(RObject::exception(val));
+    vm.current_regs()[a as usize].replace(exc);
+    Ok(())
+}
+
+pub(crate) fn op_rescue(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
+    let (a, b) = operand.as_bb().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    let exc_klass = vm.current_regs()[b as usize].take().unwrap();
+    match (&val.value, exc_klass.value.clone()) {
+        (RValue::Exception(exc), RValue::Class(klass)) => {
+            let etype = exc.error_type.borrow();
+            let is_rescued = etype.is_a(vm, klass);
+            let val = RObject::boolean(is_rescued);
+            vm.current_regs()[b as usize].replace(val.to_refcount_assigned());
+        }
+        _ => unreachable!("rescue must be called on exception")
+    };
+    Ok(())
+}
+
+pub(crate) fn op_raiseif(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
+    let a = operand.as_b().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned();
+    match val {
+        Some(val) => {
+            match &val.value {
+                RValue::Exception(e) => {
+                    return Err(e.as_ref().error_type.borrow().clone());
+                }
+                _ => {}
+            }
+        }
+        None => {}
+    }
+    Ok(())
+}
+
 pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_regs()[b as usize].clone().
@@ -974,6 +1015,9 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
 
     let ci = vm.current_callinfo.take();
     if ci.is_none() {
+        if let Some(e) = &vm.exception {
+            return Err(e.error_type.borrow().clone());
+        }
         return Ok(());
     }
 

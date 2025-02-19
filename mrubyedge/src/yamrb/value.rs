@@ -204,6 +204,14 @@ impl RObject {
         }
     }
 
+    pub fn exception(e: Rc<RException>) -> Self {
+        RObject {
+            tt: RType::Exception,
+            value: RValue::Exception(e),
+            object_id: (u64::MAX).into(),
+        }
+    }
+
     pub fn to_refcount_assigned(self) -> Rc<Self> {
         let rc = Rc::new(self);
         let id = Rc::as_ptr(&rc) as u64;

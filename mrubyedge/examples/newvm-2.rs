@@ -35,6 +35,7 @@ fn main() {
         syms: Vec::new(),
         pool: Vec::new(),
         reps: Vec::new(),
+        catch_target_pos: Vec::new(),
     };
 
     // irep 0x600000f20000 nregs=7 nlocals=3 pools=0 syms=1 reps=1 ilen=27
@@ -73,6 +74,7 @@ fn main() {
         syms: vec![value::RSym::new("do_add".to_string())],
         pool: Vec::new(),
         reps: vec![Rc::new(irep1)],
+        catch_target_pos: Vec::new(),
     };
     let mut vm = vm::VM::new_by_raw_irep(irep0);
     let ret = vm.run().unwrap();

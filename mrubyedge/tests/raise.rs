@@ -49,6 +49,36 @@ fn raise_nest_test() {
 }
 
 #[test]
+fn raise_nest_nest_test() {
+    let code = "
+    def do_raise
+      raise \"Intentional Error 2b\"
+      p :HOGE
+    end
+
+    def shim
+      do_raise
+      p :NG_1
+    end
+
+    def test_raise
+      shim
+      p :NG_2
+    end
+    ";
+    let binary = mrbc_compile("raise_nest_nest", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    let result = mrb_funcall(&mut vm, None, "test_raise", &args)
+        .err();
+    assert_eq!(&result.unwrap().message(), "Intentional Error 2b");
+}
+
+#[test]
 fn rescue_test() {
     let code = "
     def test_raise
@@ -99,4 +129,38 @@ fn rescue_nest_test() {
     let result: String = mrb_funcall(&mut vm, None, "test_raise_parent", &args)
         .unwrap().as_ref().try_into().unwrap();
     assert_eq!(&result, "rescue: Intentional Error 4");
+}
+
+#[test]
+fn rescue_nest_nest_test() {
+    let code = "
+    def test_raise
+      raise \"Intentional Error 4b\"
+    end
+
+    def shim
+      test_raise
+      \"NG_1\"
+    end
+
+    def test_raise_parent
+      begin
+        shim
+        \"NG_2\"
+      rescue => e
+        puts \"rescue: #{e.message}\"
+        \"rescue: #{e.message}\"
+      end
+    end
+    ";
+    let binary = mrbc_compile("rescue_nest_nest", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    let result: String = mrb_funcall(&mut vm, None, "test_raise_parent", &args)
+        .unwrap().as_ref().try_into().unwrap();
+    assert_eq!(&result, "rescue: Intentional Error 4b");
 }

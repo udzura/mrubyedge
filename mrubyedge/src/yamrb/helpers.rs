@@ -23,8 +23,8 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
     vm.current_irep = block.irep.as_ref().unwrap().clone();
     vm.upper = block.environ;
 
-    let res = vm.run().unwrap();
-    
+    let res = vm.run();
+
     if let Some(prev) = prev_self {
         vm.current_regs()[0].replace(prev);
     } else {
@@ -53,7 +53,20 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
         }
     }
 
-    Ok(res.clone())
+    match &res {
+        Ok(res) => {
+            Ok(res.clone())
+        },
+        Err(e) => {
+            let err = if let Some(e) = e.downcast_ref::<Error>() {
+                e.clone()
+            } else {
+                // TODO: Rust level error
+                Error::RuntimeError(format!("{:?}", e.as_ref()))
+            };
+            Err(err)
+        }
+    }   
 }
 
 pub fn mrb_call_block(vm: &mut VM, block: Rc<RObject>, recv: Option<Rc<RObject>>, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -80,20 +93,14 @@ pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: &str, args:
     if method.is_rb_func {
         call_block(vm, method, recv.clone(), args)
     } else {
-        vm.current_regs_offset += 2;
+        vm.current_regs_offset += 2; // FIXME: magick number?
         vm.current_regs()[0].replace(recv.clone());
 
         let func = vm.fn_table[method.func.unwrap()].clone();
         let res = func(vm, &args);
         vm.current_regs_offset -= 2;
 
-        if res.is_err() {
-            vm.error_code = 255;
-        }
-        match res {
-            Ok(o) => Ok(o.clone()),
-            Err(e) => Err(e),
-        }
+        res
     }
 }
 

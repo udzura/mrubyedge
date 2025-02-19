@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::rite::insn::{Fetched, OpCode};
+use crate::Error;
 
 use super::prelude::object::mrb_object_is_equal;
 use super::{helpers::mrb_funcall, value::*, vm::*};
@@ -138,329 +139,330 @@ const ENTER_K_MASK: u32 = 0b11111 << 2;
 const ENTER_D_MASK: u32 = 0b1 << 1;
 const ENTER_B_MASK: u32 = 0b1 << 0;
 
-pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: usize, len: usize) {
+pub(crate) fn consume_expr(vm: &mut VM, code: OpCode, operand: &Fetched, pos: usize, len: usize) -> Result<(), Error> {
     use crate::rite::insn::OpCode::*;
     match code {
         NOP => {
-            op_nop(vm, &operand);
+            op_nop(vm, &operand)?;
         }
         MOVE => {
-            op_move(vm, &operand);
+            op_move(vm, &operand)?;
         }
         LOADL => {
-            op_loadl(vm, &operand);
+            op_loadl(vm, &operand)?;
         }
         LOADI => {
-            op_loadi(vm, &operand);
+            op_loadi(vm, &operand)?;
         }
         LOADINEG => {
-            op_loadineg(vm, &operand);
+            op_loadineg(vm, &operand)?;
         }
         LOADI__1 => {
-            op_loadi_n(vm, -1, &operand);
+            op_loadi_n(vm, -1, &operand)?;
         }
         LOADI_0 => {
-            op_loadi_n(vm, 0, &operand);
+            op_loadi_n(vm, 0, &operand)?;
         }
         LOADI_1 => {
-            op_loadi_n(vm, 1, &operand);
+            op_loadi_n(vm, 1, &operand)?;
         }
         LOADI_2 => {
-            op_loadi_n(vm, 2, &operand);
+            op_loadi_n(vm, 2, &operand)?;
         }
         LOADI_3 => {
-            op_loadi_n(vm, 3, &operand);
+            op_loadi_n(vm, 3, &operand)?;
         }
         LOADI_4 => {
-            op_loadi_n(vm, 4, &operand);
+            op_loadi_n(vm, 4, &operand)?;
         }
         LOADI_5 => {
-            op_loadi_n(vm, 5, &operand);
+            op_loadi_n(vm, 5, &operand)?;
         }
         LOADI_6 => {
-            op_loadi_n(vm, 6, &operand);
+            op_loadi_n(vm, 6, &operand)?;
         }
         LOADI_7 => {
-            op_loadi_n(vm, 7, &operand);
+            op_loadi_n(vm, 7, &operand)?;
         }
         LOADI16 => {
-            op_loadi16(vm, &operand);
+            op_loadi16(vm, &operand)?;
         }
         LOADI32 => {
-            op_loadi32(vm, &operand);
+            op_loadi32(vm, &operand)?;
         }
         LOADSYM => {
-            op_loadsym(vm, &operand);
+            op_loadsym(vm, &operand)?;
         }
         LOADNIL => {
-            op_loadnil(vm, &operand);
+            op_loadnil(vm, &operand)?;
         }
         LOADSELF => {
-            op_loadself(vm, &operand);
+            op_loadself(vm, &operand)?;
         }
         LOADT => {
-            op_loadt(vm, &operand);
+            op_loadt(vm, &operand)?;
         }
         LOADF => {
-            op_loadf(vm, &operand);
+            op_loadf(vm, &operand)?;
         }
         GETGV => {
-            op_getgv(vm, &operand);
+            op_getgv(vm, &operand)?;
         }
         SETGV => {
-            op_setgv(vm, &operand);
+            op_setgv(vm, &operand)?;
         }
         // GETSV => {
-        //     // op_getsv(vm, &operand);
+        //     // op_getsv(vm, &operand)?;
         // }
         // SETSV => {
-        //     // op_setsv(vm, &operand);
+        //     // op_setsv(vm, &operand)?;
         // }
         GETIV => {
-            op_getiv(vm, &operand);
+            op_getiv(vm, &operand)?;
         }
         SETIV => {
-            op_setiv(vm, &operand);
+            op_setiv(vm, &operand)?;
         }
         // GETCV => {
-        //     // op_getcv(vm, &operand);
+        //     // op_getcv(vm, &operand)?;
         // }
         // SETCV => {
-        //     // op_setcv(vm, &operand);
+        //     // op_setcv(vm, &operand)?;
         // }
         GETCONST => {
-            op_getconst(vm, &operand);
+            op_getconst(vm, &operand)?;
         }
         SETCONST => {
-            op_setconst(vm, &operand);
+            op_setconst(vm, &operand)?;
         }
         GETMCNST => {
-            op_getmcnst(vm, &operand);
+            op_getmcnst(vm, &operand)?;
         }
         // SETMCNST => {
-        //     // op_setmcnst(vm, &operand);
+        //     // op_setmcnst(vm, &operand)?;
         // }
         GETUPVAR => {
-            op_getupvar(vm, &operand);
+            op_getupvar(vm, &operand)?;
         }
         SETUPVAR => {
-            op_setupvar(vm, &operand);
+            op_setupvar(vm, &operand)?;
         }
         GETIDX => {
-            op_getidx(vm, &operand);
+            op_getidx(vm, &operand)?;
         }
         SETIDX => {
-            op_setidx(vm, &operand);
+            op_setidx(vm, &operand)?;
         }
         JMP => {
-            op_jmp(vm, &operand, pos + len);
+            op_jmp(vm, &operand, pos + len)?;
         }
         JMPIF => {
-            op_jmpif(vm, &operand, pos + len);
+            op_jmpif(vm, &operand, pos + len)?;
         }
         JMPNOT => {
-            op_jmpnot(vm, &operand, pos + len);
+            op_jmpnot(vm, &operand, pos + len)?;
         }
         JMPNIL => {
-            op_jmpnil(vm, &operand, pos + len);
+            op_jmpnil(vm, &operand, pos + len)?;
         }
         // JMPUW => {
-        //     // op_jmpuw(vm, &operand);
+        //     // op_jmpuw(vm, &operand)?;
         // }
-        // EXCEPT => {
-        //     // op_except(vm, &operand);
-        // }
-        // RESCUE => {
-        //     // op_rescue(vm, &operand);
-        // }
-        // RAISEIF => {
-        //     // op_raiseif(vm, &operand);
-        // }
+        EXCEPT => {
+            op_except(vm, &operand)?;
+        }
+        RESCUE => {
+            op_rescue(vm, &operand)?;
+        }
+        RAISEIF => {
+            op_raiseif(vm, &operand)?;
+        }
         SSEND => {
-            op_ssend(vm, &operand);
+            op_ssend(vm, &operand)?;
         }
         SSENDB => {
-            op_ssendb(vm, &operand);
+            op_ssendb(vm, &operand)?;
         }
         SEND => {
-            op_send(vm, &operand);
+            op_send(vm, &operand)?;
         }
         SENDB => {
-            op_sendb(vm, &operand);
+            op_sendb(vm, &operand)?;
         }
         CALL => {
-            op_call(vm, &operand);
+            op_call(vm, &operand)?;
         }
         SUPER => {
-            op_super(vm, &operand);
+            op_super(vm, &operand)?;
         }
         // ARGARY => {
-        //     // op_argary(vm, &operand);
+        //     // op_argary(vm, &operand)?;
         // }
         ENTER => {
-            op_enter(vm, &operand);
+            op_enter(vm, &operand)?;
         }
         // KEY_P => {
-        //     // op_key_p(vm, &operand);
+        //     // op_key_p(vm, &operand)?;
         // }
         // KEYEND => {
-        //     // op_keyend(vm, &operand);
+        //     // op_keyend(vm, &operand)?;
         // }
         // KARG => {
-        //     // op_karg(vm, &operand);
+        //     // op_karg(vm, &operand)?;
         // }
         RETURN => {
-            op_return(vm, &operand);
+            op_return(vm, &operand)?;
         }
         // RETURN_BLK => {
-        //     // op_return_blk(vm, &operand);
+        //     // op_return_blk(vm, &operand)?;
         // }
         // BREAK => {
-        //     // op_break(vm, &operand);
+        //     // op_break(vm, &operand)?;
         // }
         // BLKPUSH => {
-        //     // op_blkpush(vm, &operand);
+        //     // op_blkpush(vm, &operand)?;
         // }
         ADD => {
-            op_add(vm, &operand);
+            op_add(vm, &operand)?;
         }
         ADDI => {
-            op_addi(vm, &operand);
+            op_addi(vm, &operand)?;
         }
         SUB => {
-            op_sub(vm, &operand);
+            op_sub(vm, &operand)?;
         }
         SUBI => {
-            op_subi(vm, &operand);
+            op_subi(vm, &operand)?;
         }
         MUL => {
-            op_mul(vm, &operand);
+            op_mul(vm, &operand)?;
         }
         DIV => {
-            op_div(vm, &operand);
+            op_div(vm, &operand)?;
         }
         EQ => {
-            op_eq(vm, &operand);
+            op_eq(vm, &operand)?;
         }
         LT => {
-            op_lt(vm, &operand);
+            op_lt(vm, &operand)?;
         }
         LE => {
-            op_le(vm, &operand);
+            op_le(vm, &operand)?;
         }
         GT => {
-            op_gt(vm, &operand);
+            op_gt(vm, &operand)?;
         }
         GE => {
-            op_ge(vm, &operand);
+            op_ge(vm, &operand)?;
         }
         ARRAY => {
-            op_array(vm, &operand);
+            op_array(vm, &operand)?;
         }
         ARRAY2 => {
-            op_array2(vm, &operand);
+            op_array2(vm, &operand)?;
         }
         // ARYCAT => {
-        //     // op_arycat(vm, &operand);
+        //     // op_arycat(vm, &operand)?;
         // }
         // ARYPUSH => {
-        //     // op_arypush(vm, &operand);
+        //     // op_arypush(vm, &operand)?;
         // }
         // ARYSPLAT => {
-        //     // op_arysplat(vm, &operand);
+        //     // op_arysplat(vm, &operand)?;
         // }
         // AREF => {
-        //     // op_aref(vm, &operand);
+        //     // op_aref(vm, &operand)?;
         // }
         // ASET => {
-        //     // op_aset(vm, &operand);
+        //     // op_aset(vm, &operand)?;
         // }
         // APOST => {
-        //     // op_apost(vm, &operand);
+        //     // op_apost(vm, &operand)?;
         // }
         // INTERN => {
-        //     // op_intern(vm, &operand);
+        //     // op_intern(vm, &operand)?;
         // }
         SYMBOL => {
-            op_symbol(vm, &operand);
+            op_symbol(vm, &operand)?;
         }
         STRING => {
-            op_string(vm, &operand);
+            op_string(vm, &operand)?;
         }
         STRCAT => {
-            op_strcat(vm, &operand);
+            op_strcat(vm, &operand)?;
         }
         HASH => {
-            op_hash(vm, &operand);
+            op_hash(vm, &operand)?;
         }
         // HASHADD => {
-        //     // op_hashadd(vm, &operand);
+        //     // op_hashadd(vm, &operand)?;
         // }
         // HASHCAT => {
-        //     // op_hashcat(vm, &operand);
+        //     // op_hashcat(vm, &operand)?;
         // }
         LAMBDA => {
-            op_lambda(vm, &operand);
+            op_lambda(vm, &operand)?;
         }
         BLOCK => {
-            op_block(vm, &operand);
+            op_block(vm, &operand)?;
         }
         METHOD => {
-            op_method(vm, &operand);
+            op_method(vm, &operand)?;
         }
         RANGE_INC => {
-            op_range_inc(vm, &operand);
+            op_range_inc(vm, &operand)?;
         }
         RANGE_EXC => {
-            op_range_exc(vm, &operand);
+            op_range_exc(vm, &operand)?;
         }
         OCLASS => {
-            op_oclass(vm, &operand);
+            op_oclass(vm, &operand)?;
         }
         CLASS => {
-            op_class(vm, &operand);
+            op_class(vm, &operand)?;
         }
         // MODULE => {
-        //     // op_module(vm, &operand);
+        //     // op_module(vm, &operand)?;
         // }
         EXEC => {
-            op_exec(vm, &operand);
+            op_exec(vm, &operand)?;
         }
         DEF => {
-            op_def(vm, &operand);
+            op_def(vm, &operand)?;
         }
         // ALIAS => {
-        //     // op_alias(vm, &operand);
+        //     // op_alias(vm, &operand)?;
         // }
         // UNDEF => {
-        //     // op_undef(vm, &operand);
+        //     // op_undef(vm, &operand)?;
         // }
         // SCLASS => {
-        //     // op_sclass(vm, &operand);
+        //     // op_sclass(vm, &operand)?;
         // }
         TCLASS => {
-            op_tclass(vm, &operand);
+            op_tclass(vm, &operand)?;
         }
         // DEBUG => {
-        //     // op_debug(vm, &operand);
+        //     // op_debug(vm, &operand)?;
         // }
         // ERR => {
-        //     // op_err(vm, &operand);
+        //     // op_err(vm, &operand)?;
         // }
         // EXT1 => {
-        //     // op_ext1(vm, &operand);
+        //     // op_ext1(vm, &operand)?;
         // }
         // EXT2 => {
-        //     // op_ext2(vm, &operand);
+        //     // op_ext2(vm, &operand)?;
         // }
         // EXT3 => {
-        //     // op_ext3(vm, &operand);
+        //     // op_ext3(vm, &operand)?;
         // }
         STOP => {
-            op_stop(vm, &operand);
+            op_stop(vm, &operand)?;
         }
         _ => { unimplemented!("{:?}: Not supported yet", code)}
     }
+    Ok(())
 }
 
 pub(crate) fn push_callinfo(vm: &mut VM, method_id: RSym, n_args: usize) {
@@ -489,94 +491,108 @@ fn calcurate_pc(irep: &IREP, pc: usize, original_pc: usize) -> usize {
     next_pc
 }
 
-pub(crate) fn op_nop(_vm: &mut VM, _operand: &Fetched) {
+pub(crate) fn op_nop(_vm: &mut VM, _operand: &Fetched) -> Result<(), Error> {
     // NOOP
     // eprintln!("[debug] nop");
+    Ok(())
 }
 
-pub(crate) fn op_loadi_n(vm: &mut VM, n: i32, operand: &Fetched) {
+pub(crate) fn op_loadi_n(vm: &mut VM, n: i32, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let val = RObject::integer(n as i64);
     vm.current_regs()[a].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadl(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadl(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_irep.pool[b as usize].clone();
     // TODO: support other rpool types?
     let val = Rc::new(RObject::string(val.as_str().to_string()));
     vm.current_regs()[a as usize].replace(val);
+    Ok(())
 }
 
-pub(crate) fn op_loadi16(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadi16(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bs().unwrap();
     let val = RObject::integer(b as i64);
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadi32(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadi32(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bss().unwrap();
     let val = RObject::integer((b as i64) << 16 | c as i64);
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadi(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadi(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = RObject::integer(b as i64);
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadineg(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadineg(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = RObject::integer(-(b as i64));
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadsym(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadsym(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_irep.syms[b as usize].clone();
     vm.current_regs()[a as usize].replace(Rc::new(RObject::symbol(val)));
+    Ok(())
 }
 
-pub(crate) fn op_loadnil(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadnil(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let val = RObject::nil();
     vm.current_regs()[a].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadself(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadself(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let val = vm.current_regs()[0].as_ref().cloned().unwrap();
     vm.current_regs()[a].replace(val);
+    Ok(())
 }
 
-pub(crate) fn op_loadt(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadt(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let val = RObject::boolean(true);
     vm.current_regs()[a].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_loadf(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_loadf(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let val = RObject::boolean(false);
     vm.current_regs()[a].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_getgv(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_getgv(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_irep.syms[b as usize].clone();
     let val = vm.globals.get(&val.name).unwrap().clone();
     vm.current_regs()[a as usize].replace(val);
+    Ok(())
 }
 
-pub(crate) fn op_setgv(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_setgv(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     let sym = vm.current_irep.syms[b as usize].clone();
     vm.globals.insert(sym.name.clone(), val);
+    Ok(())
 }
 
-pub(crate) fn op_getiv(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_getiv(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let this = vm.current_regs()[0].as_ref().cloned().unwrap();
     let ivar = match &this.value {
@@ -586,9 +602,10 @@ pub(crate) fn op_getiv(vm: &mut VM, operand: &Fetched) {
         _ => unreachable!("getiv must be called on instance")
     };
     vm.current_regs()[a as usize].replace(ivar);
+    Ok(())
 }
 
-pub(crate) fn op_setiv(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_setiv(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let this = vm.current_regs()[0].as_ref().cloned().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
@@ -602,9 +619,10 @@ pub(crate) fn op_setiv(vm: &mut VM, operand: &Fetched) {
         },
         _ => unreachable!("setiv must be called on instance")
     };
+    Ok(())
 }
 
-pub(crate) fn op_getconst(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_getconst(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let name = &vm.current_irep.syms[b as usize].name;
     let cval = vm.consts.get(name).cloned();
@@ -616,16 +634,18 @@ pub(crate) fn op_getconst(vm: &mut VM, operand: &Fetched) {
             panic!("constant not found: {:?}", name);
         }
     }
+    Ok(())
 }
 
-pub(crate) fn op_setconst(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_setconst(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let name = vm.current_irep.syms[b as usize].name.clone();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     vm.consts.insert(name, val);
+    Ok(())
 }
 
-pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let recv = vm.current_regs()[a as usize].take().unwrap();
     let name = vm.current_irep.syms[b as usize].name.clone();
@@ -641,9 +661,10 @@ pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) {
             panic!("constant not found: {:?}", name);
         }
     }
+    Ok(())
 }
 
-pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
     let n = c as usize;
     let mut environ = vm.upper.as_ref().expect("op_getupvar expects upper env");
@@ -664,9 +685,10 @@ pub(crate) fn op_getupvar(vm: &mut VM, operand: &Fetched) {
         let val = val.clone();
         vm.current_regs()[a as usize].replace(val.unwrap());
     }
+    Ok(())
 }
 
-pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
     let n = c as usize;
     let mut environ = vm.upper.as_ref().expect("op_getupvar expects upper env");
@@ -688,9 +710,10 @@ pub(crate) fn op_setupvar(vm: &mut VM, operand: &Fetched) {
         let target = &mut captured[b as usize];
         target.replace(val);
     }
+    Ok(())
 }
 
-pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let recv = vm.current_regs()[a].as_ref().cloned().unwrap();
     let idx = vm.current_regs()[a + 1].as_ref().cloned().unwrap();
@@ -698,83 +721,132 @@ pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) {
     // TODO: direct call of array_index for performance
     let val = mrb_funcall(vm, Some(recv), "[]", &args).expect("calling index failed");
     vm.current_regs()[a].replace(val);
+    Ok(())
 }
 
-pub(crate) fn op_setidx(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_setidx(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let recv = vm.current_regs()[a].as_ref().cloned().unwrap();
     let idx = vm.current_regs()[a + 1].as_ref().cloned().unwrap();
     let val = vm.current_regs()[a + 2].as_ref().cloned().unwrap();
     let args = vec![idx, val];
     mrb_funcall(vm, Some(recv), "[]=", &args).expect("calling index failed");
+    Ok(())
 }
 
-pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched, end_pos: usize) {
+pub(crate) fn op_jmp(vm: &mut VM, operand: &Fetched, end_pos: usize) -> Result<(), Error> {
     let a = operand.as_s().unwrap();
     let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + a as usize);
     vm.pc.set(next_pc);
+    Ok(())
 }
 
-pub(crate) fn op_jmpif(vm: &mut VM, operand: &Fetched, end_pos: usize) {
+pub(crate) fn op_jmpif(vm: &mut VM, operand: &Fetched, end_pos: usize) -> Result<(), Error> {
     let (a, b) = operand.as_bs().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     if val.is_truthy() {
         let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + b as usize);
         vm.pc.set(next_pc);
     }
+    Ok(())
 }
 
-pub(crate) fn op_jmpnot(vm: &mut VM, operand: &Fetched, end_pos: usize) {
+pub(crate) fn op_jmpnot(vm: &mut VM, operand: &Fetched, end_pos: usize) -> Result<(), Error> {
     let (a, b) = operand.as_bs().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     if val.is_falsy() {
         let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + b as usize);
         vm.pc.set(next_pc);
     }
+    Ok(())
 }
 
-pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched, end_pos: usize) {
+pub(crate) fn op_jmpnil(vm: &mut VM, operand: &Fetched, end_pos: usize) -> Result<(), Error> {
     let (a, b) = operand.as_bs().unwrap();
     let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     if val.is_nil() {
         let next_pc = calcurate_pc(&vm.current_irep, vm.pc.get(), end_pos + b as usize);
         vm.pc.set(next_pc);
     }
+    Ok(())
 }
 
-pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_except(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
+    let a = operand.as_b().unwrap();
+    let val = vm.exception.take().unwrap();
+    let exc = Rc::new(RObject::exception(val));
+    vm.current_regs()[a as usize].replace(exc);
+    Ok(())
+}
+
+pub(crate) fn op_rescue(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
+    let (a, b) = operand.as_bb().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
+    let exc_klass = vm.current_regs()[b as usize].take().unwrap();
+    match (&val.value, exc_klass.value.clone()) {
+        (RValue::Exception(exc), RValue::Class(klass)) => {
+            let etype = exc.error_type.borrow();
+            let is_rescued = etype.is_a(vm, klass);
+            let val = RObject::boolean(is_rescued);
+            vm.current_regs()[b as usize].replace(val.to_refcount_assigned());
+        }
+        _ => unreachable!("rescue must be called on exception")
+    };
+    Ok(())
+}
+
+pub(crate) fn op_raiseif(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
+    let a = operand.as_b().unwrap();
+    let val = vm.current_regs()[a as usize].as_ref().cloned();
+    match val {
+        Some(val) => {
+            match &val.value {
+                RValue::Exception(e) => {
+                    return Err(e.as_ref().error_type.borrow().clone());
+                }
+                _ => {}
+            }
+        }
+        None => {}
+    }
+    Ok(())
+}
+
+pub(crate) fn op_move(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val = vm.current_regs()[b as usize].clone().
         expect(&format!("register {} is empty", b));
     vm.current_regs()[a as usize].replace(val);
+    Ok(())
 }
 
-pub(crate) fn op_ssend(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_ssend(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
-    do_op_send(vm, 0, None, a, b, c);
+    do_op_send(vm, 0, None, a, b, c)
 }
 
-pub(crate) fn op_ssendb(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_ssendb(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
-    do_op_send(vm, 0, Some(a as usize + c as usize + 1), a, b, c);
+    do_op_send(vm, 0, Some(a as usize + c as usize + 1), a, b, c)
 }
 
-pub(crate) fn op_send(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_send(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
-    do_op_send(vm, a as usize, None, a, b, c);
+    do_op_send(vm, a as usize, None, a, b, c)
 }
 
-pub(crate) fn op_sendb(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_sendb(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
-    do_op_send(vm, a as usize, Some(a as usize + c as usize + 1), a, b, c);
+    do_op_send(vm, a as usize, Some(a as usize + c as usize + 1), a, b, c)
 }
 
-pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize>, a: u8, b: u8, c: u8) {
+pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize>, a: u8, b: u8, c: u8) -> Result<(), Error> {
     let block_index = (a + c + 1) as usize;
 
     let recv = vm.current_regs()[recv_index].as_ref().cloned().unwrap();
-    let mut args = (0..c).
-        map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap()).collect::<Vec<_>>();
+    let mut args = (0..c)
+        .map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap())
+        .collect::<Vec<_>>();
     if let Some(blk_index) = blk_index {
         args.push(vm.current_regs()[blk_index].as_ref().cloned().unwrap());
     } else {
@@ -783,9 +855,9 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
 
     let method_id = vm.current_irep.syms[b as usize].clone();
     let klass = recv.get_class(vm);
-    let method = klass.find_method(&method_id.name).expect(
-        &format!("method {} not found. TODO: medthod_missing", &method_id.name),
-    );
+    let method = klass.find_method(&method_id.name).ok_or_else(|| {
+        Error::NoMethodError(method_id.name.clone())
+    })?;
 
     vm.current_regs()[a as usize].replace(recv.clone());
     if !method.is_rb_func {
@@ -798,16 +870,18 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
         for i in (a as usize + 1)..block_index {
             vm.current_regs()[i].take();
         }
- 
-        if res.is_err() {
-            eprintln!("[TODO] error handling: {:?}", &res);
-            vm.error_code = 255;
-            vm.current_regs()[a as usize].replace(Rc::new(RObject::nil()));
-        } else {
-            vm.current_regs()[a as usize].replace(res.unwrap());
+
+        match res {
+            Ok(val) => {
+                vm.current_regs()[a as usize].replace(val);
+            }
+            Err(e) => {
+                vm.current_regs()[a as usize].replace(Rc::new(RObject::nil()));
+                return Err(e);
+            }
         }
 
-        return
+        return Ok(());
     }
 
     push_callinfo(vm, method_id, c as usize);
@@ -815,9 +889,10 @@ pub(crate) fn do_op_send(vm: &mut VM, recv_index: usize, blk_index: Option<usize
     vm.pc.set(0);
     vm.current_irep = method.irep.unwrap();
     vm.current_regs_offset += a as usize;
+    Ok(())
 }
 
-pub(crate) fn op_call(vm: &mut VM, _operand: &Fetched) {
+pub(crate) fn op_call(vm: &mut VM, _operand: &Fetched) -> Result<(), Error> {
     push_callinfo(vm, "<tailcall>".into(), 0);
 
     vm.pc.set(0);
@@ -825,22 +900,23 @@ pub(crate) fn op_call(vm: &mut VM, _operand: &Fetched) {
     match &proc.value {
         RValue::Proc(proc) => {
             vm.current_irep = proc.irep.clone().unwrap();
-        },
-        _ => unreachable!("call must be called on proc")
+        }
+        _ => unreachable!("call must be called on proc"),
     }
+    Ok(())
 }
 
-pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
-    // mrbc_sym sym_id = vm->callinfo_tail->mid;
     let sym_id = vm.current_callinfo.as_ref().unwrap().method_id.name.clone();
     let recv = vm.current_regs()[0].as_ref().cloned().unwrap();
-    let args = (0..b).
-        map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap()).collect::<Vec<_>>();
+    let args = (0..b)
+        .map(|i| vm.current_regs()[(a + i + 1) as usize].as_ref().cloned().unwrap())
+        .collect::<Vec<_>>();
 
     let klass = match &recv.value {
         RValue::Instance(ins) => ins.class.as_ref(),
-        _ => unreachable!("super must be called on instance")
+        _ => unreachable!("super must be called on instance"),
     };
     let superclass = klass.super_class.as_ref().expect("superclass not found");
     let sc_procs = superclass.procs.borrow();
@@ -848,21 +924,29 @@ pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) {
     if !method.is_rb_func {
         let func = vm.get_fn(method.func.unwrap()).unwrap();
         let res = func(vm, &args);
-        if res.is_err() {
-            vm.error_code = 255;
-        }
         for i in (a as usize + 1)..(a as usize + b as usize + 1) {
             vm.current_regs()[i].take();
         }
-        return
+        match res {
+            Ok(val) => {
+                vm.current_regs()[a as usize].replace(val);
+            }
+            Err(e) => {
+                vm.current_regs()[a as usize].replace(Rc::new(RObject::nil()));
+                return Err(e);
+            }
+            
+        }
+        return Ok(());
     }
-    
+
     vm.current_regs()[a as usize].replace(recv.clone());
     push_callinfo(vm, method.sym_id.clone().unwrap(), b as usize);
 
     vm.pc.set(0);
     vm.current_irep = method.irep.as_ref().unwrap().clone();
     vm.current_regs_offset += a as usize;
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -890,30 +974,26 @@ impl From<u32> for EnterArgInfo {
     }
 }
 
-pub(crate) fn op_enter(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_enter(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_w().unwrap();
     let arg_info = EnterArgInfo::from(a);
-    // TODO: only check use of m1
     let m1_argc = arg_info.m1 as usize;
     for i in 0..m1_argc {
         match vm.current_regs()[i + 1].as_ref() {
-            Some(_) => {
-                // no problem,
-            },
+            Some(_) => {}
             None => {
                 unreachable!("argument {} not passed", i + 1);
             }
         }
     }
+    Ok(())
 }
 
-pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let old_irep = vm.current_irep.clone();
     let nregs = old_irep.nregs;
 
-    // TODO: capturing env on return makes lots of clone
-    //       I wish it would be optimized
     let regs0_cloned: Vec<_> = vm.current_regs()[0..nregs].iter().cloned().collect();
     if let Some(_) = vm.has_env_ref.get(&vm.current_irep.__id) {
         if let Some(environ) = vm.cur_env.get(&vm.current_irep.__id) {
@@ -935,8 +1015,10 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
 
     let ci = vm.current_callinfo.take();
     if ci.is_none() {
-        // Will stop VM: no more opereation
-        return;
+        if let Some(e) = &vm.exception {
+            return Err(e.error_type.borrow().clone());
+        }
+        return Ok(());
     }
 
     let ci = ci.unwrap();
@@ -950,9 +1032,10 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) {
     if vm.current_regs()[0].is_none() {
         todo!("debug");
     }
+    Ok(())
 }
 
-pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -984,9 +1067,10 @@ pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(result);
+    Ok(())
 }
 
-pub(crate) fn op_addi(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_addi(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val1 = vm.current_regs()[a as usize].take().unwrap();
     let val2 = b as i64;
@@ -999,9 +1083,10 @@ pub(crate) fn op_addi(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a as usize].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_sub(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_sub(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1015,9 +1100,10 @@ pub(crate) fn op_sub(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_subi(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_subi(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let val1 = vm.current_regs()[a as usize].take().unwrap();
     let val2 = b as i64;
@@ -1030,9 +1116,10 @@ pub(crate) fn op_subi(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a as usize].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_mul(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_mul(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1046,9 +1133,10 @@ pub(crate) fn op_mul(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_div(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_div(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1062,9 +1150,10 @@ pub(crate) fn op_div(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_lt(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_lt(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1078,9 +1167,10 @@ pub(crate) fn op_lt(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_le(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_le(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1094,18 +1184,20 @@ pub(crate) fn op_le(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_eq(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_eq(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let lhs = vm.current_regs()[a].take().unwrap();
     let rhs = vm.current_regs()[b].take().unwrap();
     let result = mrb_object_is_equal(vm, lhs, rhs);
     vm.current_regs()[a].replace(result);
+    Ok(())
 }
 
-pub(crate) fn op_gt(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_gt(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1119,9 +1211,10 @@ pub(crate) fn op_gt(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_ge(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_ge(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].take().unwrap();
@@ -1135,16 +1228,19 @@ pub(crate) fn op_ge(vm: &mut VM, operand: &Fetched) {
         }
     };
     vm.current_regs()[a].replace(Rc::new(result));
+    Ok(())
 }
 
-pub(crate) fn op_array(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_array(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     do_op_array(vm, a as usize, a as usize, b as usize);
+    Ok(())
 }
 
-pub(crate) fn op_array2(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_array2(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b, c) = operand.as_bbb().unwrap();
     do_op_array(vm, a as usize, b as usize, c as usize);
+    Ok(())
 }
 
 fn do_op_array(vm: &mut VM, this: usize, start: usize, n: usize) {
@@ -1160,22 +1256,24 @@ fn do_op_array(vm: &mut VM, this: usize, start: usize, n: usize) {
     vm.current_regs()[this].replace(Rc::new(val));
 }
 
-pub(crate) fn op_symbol(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_symbol(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let symstr = vm.current_irep.pool[b as usize].as_str().to_string();
     let sym = RSym::new(symstr);
     let val = RObject::symbol(sym);
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_string(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_string(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let str = vm.current_irep.pool[b as usize].as_str().to_string();
     let val = RObject::string(str);
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let b = a + 1;
     let val1 = vm.current_regs()[a].clone().unwrap();
@@ -1199,9 +1297,10 @@ pub(crate) fn op_strcat(vm: &mut VM, operand: &Fetched) {
             unreachable!("strcat supports only string")
         }
     };
+    Ok(())
 }
 
-pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let a = a as usize;
     let b = b as usize;
@@ -1213,9 +1312,10 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) {
     }
     let val = RObject::hash(hash);
     vm.current_regs()[a as usize].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let environ = ENV {
@@ -1244,9 +1344,10 @@ pub(crate) fn op_lambda(vm: &mut VM, operand: &Fetched) {
         object_id: u64::MAX.into(),
     };
     vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
+    Ok(())
 }
 
-pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let environ = ENV {
@@ -1273,9 +1374,10 @@ pub(crate) fn op_block(vm: &mut VM, operand: &Fetched) {
         object_id: u64::MAX.into(),
     };
     vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
+    Ok(())
 }
 
-pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let irep = Some(vm.current_irep.reps[b as usize].clone());
     let val = RObject {
@@ -1292,16 +1394,19 @@ pub(crate) fn op_method(vm: &mut VM, operand: &Fetched) {
         object_id: u64::MAX.into(),
     };
     vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
+    Ok(())
 }
 
-pub(crate) fn op_range_inc(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_range_inc(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap();
     do_op_range(vm, a as usize, a as usize + 1, false);
+    Ok(())
 }
 
-pub(crate) fn op_range_exc(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_range_exc(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap();
     do_op_range(vm, a as usize, a as usize + 1, true);
+    Ok(())
 }
 
 fn do_op_range(vm: &mut VM, a: usize, b: usize, exclusive: bool) {
@@ -1315,13 +1420,14 @@ fn do_op_range(vm: &mut VM, a: usize, b: usize, exclusive: bool) {
     vm.current_regs()[a as usize].replace(val.to_refcount_assigned());
 }
 
-pub(crate) fn op_oclass(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_oclass(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let val = vm.object_class.clone().into();
     vm.current_regs()[a].replace(Rc::new(val));
+    Ok(())
 }
 
-pub(crate) fn op_class(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_class(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let superclass = vm.current_regs()[a as usize + 1].as_ref().cloned();
     let name = vm.current_irep.syms[b as usize].clone();
@@ -1341,9 +1447,10 @@ pub(crate) fn op_class(vm: &mut VM, operand: &Fetched) {
     let klass = vm.define_class(&name, Some(superclass));
 
     vm.current_regs()[a as usize].replace(Rc::new(klass.into()));
+    Ok(())
 }
 
-pub(crate) fn op_exec(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_exec(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let recv = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
 
@@ -1355,9 +1462,10 @@ pub(crate) fn op_exec(vm: &mut VM, operand: &Fetched) {
     vm.current_irep = irep;
     vm.current_regs_offset += a as usize;
     vm.target_class = recv.get_class(vm);
+    Ok(())
 }
 
-pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let (a, b) = operand.as_bb().unwrap();
     let klass = vm.current_regs()[a as usize].as_ref().cloned().unwrap();
     let method = vm.current_regs()[(a + 1) as usize].as_ref().cloned().unwrap();
@@ -1374,15 +1482,18 @@ pub(crate) fn op_def(vm: &mut VM, operand: &Fetched) {
         unreachable!("DEF must be called on class");
     }
     vm.current_regs()[a as usize].replace(RObject::symbol(sym).to_refcount_assigned());
+    Ok(())
 }
 
-pub(crate) fn op_tclass(vm: &mut VM, operand: &Fetched) {
+pub(crate) fn op_tclass(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let a = operand.as_b().unwrap() as usize;
     let klass = vm.object_class.clone();
     let val: RObject = klass.into();
     vm.current_regs()[a].replace(val.to_refcount_assigned());
+    Ok(())
 } 
 
-pub(crate) fn op_stop(vm: &mut VM, _operand: &Fetched) {
+pub(crate) fn op_stop(vm: &mut VM, _operand: &Fetched) -> Result<(), Error> {
     vm.flag_preemption.set(true);
+    Ok(())
 }

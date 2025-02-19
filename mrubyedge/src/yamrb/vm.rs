@@ -27,7 +27,7 @@ pub struct VM {
     pub current_regs_offset: usize,
     pub current_callinfo: Option<Rc<CALLINFO>>,
     pub target_class: Rc<RClass>,
-    pub error_code: u32,
+    pub exception: Option<Rc<RException>>,
 
     pub flag_preemption: Cell<bool>,
 
@@ -65,6 +65,7 @@ impl VM {
             syms: Vec::new(),
             pool: Vec::new(),
             reps: Vec::new(),
+            catch_target_pos: Vec::new(),
         };
         Self::new_by_raw_irep(irep)
     }
@@ -92,7 +93,7 @@ impl VM {
         let current_regs_offset = 0;
         let current_callinfo = None;
         let target_class = object_class.clone();
-        let error_code = 0;
+        let exception = None;
         let flag_preemption = Cell::new(false);
         let fn_table = Vec::new();
         let upper = None;
@@ -109,7 +110,7 @@ impl VM {
             current_regs_offset,
             current_callinfo,
             target_class,
-            error_code,
+            exception,
             flag_preemption,
             object_class,
             builtin_class_table,
@@ -142,7 +143,34 @@ impl VM {
         if self.current_regs()[0].is_none() {
             self.current_regs()[0].replace(top_self.clone());
         }
+        let mut rescued = false;
+
         loop {
+            if ! rescued {
+                if let Some(_e) = self.exception.clone() {
+                    let operand = insn::Fetched::B(0);
+                    if let Some(pos) = self.find_next_handler_pos() {
+                        self.pc.set(pos);
+                        rescued = true;
+                        continue;
+                    }
+
+                    match op_return(self, &operand) {
+                        Ok(_) => {},
+                        Err(_) => {
+                            // use assigned expection through
+                            break;
+                        }
+                    }
+                    if self.flag_preemption.get() {
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+            }
+            rescued = false;
+
             let pc = self.pc.get();
             if self.current_irep.code.len() <= pc {
                 // reached end of the IREP
@@ -155,7 +183,14 @@ impl VM {
             if env::var("MRUBYEDGE_DEBUG").is_ok() {
                 eprintln!("{:?}: {:?} (pos={} len={})", &op.code, &op.operand, op.pos, op.len);
             }
-            consume_expr(self, op.code, &operand, op.pos, op.len);
+            match consume_expr(self, op.code, &operand, op.pos, op.len) {
+                Ok(_) => {},
+                Err(e) => {
+                    let exception = RException::from_error(self, &e);
+                    self.exception = Some(Rc::new(exception));
+                    continue;
+                }
+            }
 
             if self.flag_preemption.get() {
                 break;
@@ -164,6 +199,10 @@ impl VM {
 
         self.flag_preemption.set(false);
 
+        if let Some(e) = self.exception.clone() {
+            return Err(e.error_type.borrow().clone().into());
+        }
+
         let retval = match self.current_regs()[0].take() {
             Some(v) => Ok(v),
             None => Ok(Rc::new(RObject::nil()))
@@ -171,6 +210,16 @@ impl VM {
         self.current_regs()[0].replace(top_self.clone());
 
         retval
+    }
+
+    pub(crate) fn find_next_handler_pos(&mut self) -> Option<usize> {
+        let ci = self.pc.get();
+        for p in self.current_irep.catch_target_pos.iter() {
+            if ci < *p {
+                return Some(*p);
+            }
+        }
+        None
     }
 
     pub(crate) fn current_regs(&mut self) -> &mut [Option<Rc<RObject>>] {
@@ -212,6 +261,12 @@ impl VM {
         self.builtin_class_table.insert(name, class.clone());
         class
     }
+
+    pub(crate) fn define_standard_class_under(&mut self, name: &'static str, sklass: Rc<RClass>) -> Rc<RClass> {
+        let class = self.define_class(name, Some(sklass));
+        self.builtin_class_table.insert(name, class.clone());
+        class
+    }
 }
 
 fn interpret_insn(mut insns: &[u8]) -> Vec<Op> {
@@ -238,6 +293,7 @@ fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
         syms: Vec::new(),
         pool: Vec::new(),
         reps: Vec::new(),
+        catch_target_pos: Vec::new(),
     };
     for sym in irep.syms.iter() {
         irep1.syms.push(RSym::new(sym.to_string_lossy().to_string()));
@@ -245,8 +301,14 @@ fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
     for str in irep.strvals.iter() {
         irep1.pool.push(RPool::Str(str.to_string_lossy().to_string()));
     }
-
     let code = interpret_insn(&mut irep.insn);
+    for ch in irep.catch_handlers.iter() {
+        let pos = ch.target;
+        let (i, _) = code.iter().enumerate().find(|(_, op)| op.pos == pos).unwrap();
+        irep1.catch_target_pos.push(i);
+    }
+    irep1.catch_target_pos.sort();
+
     irep1.code = code;
     (irep1, pos + 1)
 }
@@ -278,7 +340,8 @@ pub struct IREP {
     pub code: Vec<Op>,
     pub syms: Vec<RSym>,
     pub pool: Vec<RPool>,
-    pub reps: Vec<Rc<IREP>>
+    pub reps: Vec<Rc<IREP>>,
+    pub catch_target_pos: Vec<usize>,
 }
 
 #[derive(Debug, Clone)]

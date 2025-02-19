@@ -22,6 +22,7 @@ pub enum RType {
     Range,
     SharedMemory,
     Data,
+    Exception,
     Nil,
 }
 
@@ -40,6 +41,7 @@ pub enum RValue {
     Range(Rc<RObject>, Rc<RObject>, bool),
     SharedMemory(Rc<RefCell<SharedMemory>>),
     Data,
+    Exception(Rc<RException>),
     Nil,
 }
 
@@ -202,6 +204,14 @@ impl RObject {
         }
     }
 
+    pub fn exception(e: Rc<RException>) -> Self {
+        RObject {
+            tt: RType::Exception,
+            value: RValue::Exception(e),
+            object_id: (u64::MAX).into(),
+        }
+    }
+
     pub fn to_refcount_assigned(self) -> Rc<Self> {
         let rc = Rc::new(self);
         let id = Rc::as_ptr(&rc) as u64;
@@ -302,6 +312,7 @@ impl RObject {
             RValue::Range(_, _, _) => vm.get_class_by_name("Range"),
             RValue::SharedMemory(_) => vm.get_class_by_name("SharedMemory"),
             RValue::Data => todo!("return ...? class"),
+            RValue::Exception(e) => e.class.clone(),
             RValue::Nil => vm.get_class_by_name("NilClass"),
         }
     }
@@ -573,6 +584,47 @@ impl RPool {
         match self {
             RPool::Str(s) => s,
             _ => unreachable!("RPool is not a string...?"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RException {
+    pub class: Rc<RClass>,
+    pub error_type: RefCell<Error>,
+    pub message: String,
+    pub backtrace: Vec<String>, // TODO
+}
+
+impl RClass {
+    pub fn from_error(vm: &mut VM, e: &Error) -> Rc<Self> {
+        match e {
+            Error::General => {
+                return vm.get_class_by_name("Exception");
+            }
+            Error::InvalidOpCode => {
+                return vm.get_class_by_name("LoadError");
+            }
+            Error::RuntimeError(_) => {
+                return vm.get_class_by_name("RuntimeError");
+            }
+            Error::TypeMismatch => {
+                return vm.get_class_by_name("LoadError");
+            }
+            Error::NoMethodError(_) => {
+                return vm.get_class_by_name("NoMethodError");
+            }
+        }
+    }
+}
+
+impl RException {
+    pub fn from_error(vm: &mut VM, e: &Error) -> Self {
+        RException {
+            class: RClass::from_error(vm, e),
+            error_type: RefCell::new(e.clone()),
+            message: e.message(),
+            backtrace: Vec::new(),
         }
     }
 }

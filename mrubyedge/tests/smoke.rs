@@ -24,6 +24,24 @@ fn smoke_test() {
 }
 
 #[test]
+fn p_test() {
+    let code = "
+    def hello
+      o = Object.new
+      p o
+    end";
+    let binary = mrbc_compile("ppp", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    vm.run().unwrap();
+
+    // Assert
+    let args = vec![];
+    let result: () = mrb_funcall(&mut vm, None, "hello", &args).unwrap().as_ref().try_into().unwrap();
+    assert_eq!(result, ());
+}
+
+#[test]
 fn fib_test() {
     let code = "
         def fib(n)

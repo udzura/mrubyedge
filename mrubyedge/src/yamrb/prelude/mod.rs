@@ -1,6 +1,7 @@
 use super::vm::VM;
 
 pub mod object;
+pub mod exception;
 pub mod class;
 pub mod integer;
 pub mod string;
@@ -11,6 +12,7 @@ pub mod shared_memory;
 
 pub fn prelude(vm: &mut VM) {
     object::initialize_object(vm);
+    exception::initialize_exception(vm);
     class::initialize_class(vm);
     integer::initialize_integer(vm);
     string::initialize_string(vm);

@@ -73,6 +73,7 @@ fn main() {
         syms: vec![value::RSym::new("fib".to_string())],
         pool: Vec::new(),
         reps: Vec::new(),
+        catch_target_pos: Vec::new(),
     };
 
     // irep0:
@@ -103,6 +104,7 @@ fn main() {
         syms: vec![value::RSym::new("fib".to_string())],
         pool: Vec::new(),
         reps: vec![Rc::new(irep1)],
+        catch_target_pos: Vec::new(),
     };
     let mut vm = vm::VM::new_by_raw_irep(irep0);
     let ret = vm.run().unwrap();

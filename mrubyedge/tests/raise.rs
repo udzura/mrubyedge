@@ -49,6 +49,34 @@ fn raise_nest_test() {
 }
 
 #[test]
+fn raise_nest_test_toplevel() {
+    let code = "
+    def do_raise
+      raise \"Intentional Error 0\"
+      p :HOGE
+    end
+
+    def shim
+      do_raise
+      p :NG_NG
+    end
+
+    shim
+    p :NG
+    ";
+    let binary = mrbc_compile("raise_nest_toplevel", code);
+    let mut rite = mrubyedge::rite::load(&binary).unwrap();
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    
+    // Assert
+    let result = vm.run().err();
+    assert_eq!(
+      &result.unwrap().downcast_ref::<mrubyedge::Error>().unwrap().message(),
+      "Intentional Error 0",
+    );
+}
+
+#[test]
 fn raise_nest_nest_test() {
     let code = "
     def do_raise

@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::rite::Error;
+use crate::Error;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Fetched {
@@ -20,56 +20,56 @@ impl Fetched {
     pub fn as_z(self) -> FetchResult<()> {
         match self {
             Fetched::Z => Ok(()),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invaid operand")),
         }
     }
 
     pub fn as_b(self) -> FetchResult<u8> {
         match self {
             Fetched::B(a) => Ok(a),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invaid operand")),
         }
     }
 
     pub fn as_bb(self) -> FetchResult<(u8, u8)> {
         match self {
             Fetched::BB(a, b) => Ok((a, b)),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invaid operand")),
         }
     }
 
     pub fn as_bbb(self) -> FetchResult<(u8, u8, u8)> {
         match self {
             Fetched::BBB(a, b, c) => Ok((a, b, c)),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invalid operand")),
         }
     }
 
     pub fn as_bs(self) -> FetchResult<(u8, u16)> {
         match self {
             Fetched::BS(a, b) => Ok((a, b)),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invalid operand")),
         }
     }
 
     pub fn as_bss(self) -> FetchResult<(u8, u16, u16)> {
         match self {
             Fetched::BSS(a, b, c) => Ok((a, b, c)),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invalid operand")),
         }
     }
 
     pub fn as_s(self) -> FetchResult<u16> {
         match self {
             Fetched::S(s) => Ok(s),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invalid operand")),
         }
     }
 
     pub fn as_w(self) -> FetchResult<u32> {
         match self {
             Fetched::W(w) => Ok(w),
-            _ => Err(Error::InvalidOperand),
+            _ => Err(Error::internal("invalid operand")),
         }
     }
 
@@ -448,14 +448,14 @@ impl Debug for OpCode {
 
 fn fetch_z(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 1 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     *bin = &bin[1..];
     Ok(Fetched::Z)
 }
 fn fetch_b(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 2 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let a = bin[1];
     let operand = Fetched::B(a);
@@ -465,7 +465,7 @@ fn fetch_b(bin: &mut &[u8]) -> Result<Fetched, Error> {
 }
 fn fetch_bb(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 3 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let a = bin[1];
     let b = bin[2];
@@ -476,7 +476,7 @@ fn fetch_bb(bin: &mut &[u8]) -> Result<Fetched, Error> {
 }
 fn fetch_bbb(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 4 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let a = bin[1];
     let b = bin[2];
@@ -488,7 +488,7 @@ fn fetch_bbb(bin: &mut &[u8]) -> Result<Fetched, Error> {
 }
 fn fetch_bs(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 4 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let a = bin[1];
     let s = ((bin[2] as u16) << 8) | bin[3] as u16;
@@ -499,7 +499,7 @@ fn fetch_bs(bin: &mut &[u8]) -> Result<Fetched, Error> {
 }
 fn fetch_bss(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 6 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let a = bin[1];
     let s1 = ((bin[2] as u16) << 8) | bin[3] as u16;
@@ -511,7 +511,7 @@ fn fetch_bss(bin: &mut &[u8]) -> Result<Fetched, Error> {
 }
 fn fetch_s(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 3 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let s = ((bin[1] as u16) << 8) | bin[2] as u16;
     let operand = Fetched::S(s);
@@ -521,7 +521,7 @@ fn fetch_s(bin: &mut &[u8]) -> Result<Fetched, Error> {
 }
 fn fetch_w(bin: &mut &[u8]) -> Result<Fetched, Error> {
     if bin.len() < 4 {
-        return Err(Error::TooShort);
+        return Err(Error::internal("byte code too short"));
     }
     let w = ((bin[1] as u32) << 16) | ((bin[2] as u32) << 8) | bin[3] as u32;
     let operand = Fetched::W(w);

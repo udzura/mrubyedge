@@ -10,7 +10,7 @@ pub(crate) fn initialize_range(vm: &mut VM) {
 }
 
 pub fn mrb_range_is_include(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     match &this.value {
         RValue::Range(start, end, exclusive) => {
             let obj = args[0].clone();
@@ -42,7 +42,7 @@ pub fn mrb_range_is_include(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObj
 }
 
 pub fn mrb_range_each(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let block = &args[0];
     match &this.value {
         RValue::Range(start, end, exclusive) => {

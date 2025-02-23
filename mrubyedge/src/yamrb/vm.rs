@@ -1,10 +1,10 @@
 use std::cell::{Cell, RefCell};
 use std::env;
-use std::error::Error;
 use std::rc::Rc;
 use std::collections::HashMap;
 
 use crate::rite::{insn, Irep, Rite};
+use crate::Error;
 
 use super::{op, optable::*};
 use super::prelude::prelude;
@@ -127,7 +127,7 @@ impl VM {
         vm
     }
 
-    pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
+    pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn std::error::Error>> {
         let class = self.object_class.clone();
         // Insert top_self
         let top_self = RObject{
@@ -226,7 +226,19 @@ impl VM {
         &mut self.regs[self.current_regs_offset..]
     }
 
-    pub fn getself(&mut self) -> Rc<RObject> {
+    pub(crate) fn get_current_regs_cloned(&mut self, i: usize) -> Result<Rc<RObject>, Error> {
+        self.current_regs()[i].clone().ok_or_else(|| Error::internal(format!("register {} is not assigned", i)))   
+    }
+
+    pub(crate) fn take_current_regs(&mut self, i: usize) -> Result<Rc<RObject>, Error> {
+        self.current_regs()[i].take().ok_or_else(|| Error::internal(format!("register {} is not assigned", i)))   
+    }
+
+    pub fn getself(&mut self) -> Result<Rc<RObject>, Error> {
+        self.get_current_regs_cloned(0)
+    }
+
+    pub fn must_getself(&mut self) -> Rc<RObject> {
         self.current_regs()[0].clone().unwrap()
     }
 

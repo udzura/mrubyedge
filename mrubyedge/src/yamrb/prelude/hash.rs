@@ -11,7 +11,7 @@ pub(crate) fn initialize_hash(vm: &mut VM) {
 }
 
 fn mrb_hash_get_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     mrb_hash_get_index(this, args[0].clone())
 }
 
@@ -31,7 +31,7 @@ pub fn mrb_hash_get_index(this: Rc<RObject>, key: Rc<RObject>) -> Result<Rc<RObj
 }
 
 fn mrb_hash_set_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let key = args[0].clone();
     let value = args[1].clone();
     mrb_hash_set_index(this, key, value)
@@ -51,7 +51,7 @@ pub fn mrb_hash_set_index(this: Rc<RObject>, key: Rc<RObject>, value: Rc<RObject
 }
 
 fn mrb_hash_each(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let block = &args[0];
     match &this.value {
         RValue::Hash(hash) => {

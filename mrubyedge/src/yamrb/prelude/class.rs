@@ -15,7 +15,7 @@ pub(crate) fn initialize_class(vm: &mut VM) {
 }
 
 fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let class = vm.getself();
+    let class = vm.getself()?;
     let class = match &class.value {
         RValue::Class(c) => c.clone(),
         _ => {
@@ -48,7 +48,7 @@ fn mrb_class_new(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error
 }
 
 fn mrb_class_attr_reader(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let class_ = vm.getself();
+    let class_ = vm.getself()?;
     let class = match &class_.value {
         RValue::Class(c) => c.clone(),
         _ => {
@@ -60,7 +60,7 @@ fn mrb_class_attr_reader(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject
             RValue::Symbol(ref sym) => {
                 let sym_id: &'static str = sym.name.clone().leak();
                 let method = move |vm: &mut VM, _args: &[Rc<RObject>]| {
-                    let this = vm.getself();
+                    let this = vm.getself()?;
                     let key = format!("@{}", sym_id);
                     let value = match &this.value {
                         RValue::Instance(i) => {
@@ -89,7 +89,7 @@ fn mrb_class_attr_reader(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject
 }
 
 fn mrb_class_attr_writer(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let class_ = vm.getself();
+    let class_ = vm.getself()?;
     let class = match &class_.value {
         RValue::Class(c) => c.clone(),
         _ => {
@@ -101,7 +101,7 @@ fn mrb_class_attr_writer(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject
             RValue::Symbol(ref sym) => {
                 let sym_id: &'static str = sym.name.clone().leak();
                 let method = move |vm: &mut VM, args: &[Rc<RObject>]| {
-                    let this = vm.getself();
+                    let this = vm.getself()?;
                     let key = format!("@{}", sym_id);
                     let value = args[0].clone();
                     match &this.value {

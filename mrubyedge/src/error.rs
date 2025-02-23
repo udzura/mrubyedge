@@ -8,6 +8,7 @@ use crate::yamrb::vm::VM;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
     General,
+    Internal(String),
     InvalidOpCode,
     RuntimeError(String),
     TypeMismatch,
@@ -23,9 +24,14 @@ impl fmt::Display for Error {
 impl error::Error for Error {}
 
 impl Error {
-    pub fn message(&self) -> String{
+    pub fn internal(msg: impl Into<String>) -> Error {
+        Error::Internal(msg.into())
+    }
+
+    pub fn message(&self) -> String {
         match self {
             Error::General => "General error".to_string(),
+            Error::Internal(msg) => format!("[Internal Error] {}", msg.clone()),
             Error::InvalidOpCode => "Invalid opcode".to_string(),
             Error::RuntimeError(msg) => msg.clone(),
             Error::TypeMismatch => "Type mismatch".to_string(),
@@ -36,6 +42,7 @@ impl Error {
     pub fn is_instance_of(&self, other: Rc<RClass>) -> bool {
         match (self, other.sym_id.name.as_str()) {
             (Error::General, "StandardError") => true,
+            (Error::Internal(_), "InternalError") => true,
             (Error::InvalidOpCode, "StandardError") => true,
             (Error::RuntimeError(_), "RuntimeError") => true,
             (Error::TypeMismatch, "StandardError") => true,

@@ -11,7 +11,7 @@ pub(crate) fn initialize_string(vm: &mut VM) {
 }
 
 fn mrb_string_unpack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let value: Vec<u8> = this.as_ref().try_into()?;
     let format: Vec<u8> = args[0].as_ref().try_into()?;
     let mut cursor: usize = 0;

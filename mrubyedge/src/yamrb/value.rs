@@ -602,6 +602,9 @@ impl RClass {
             Error::General => {
                 return vm.get_class_by_name("Exception");
             }
+            Error::Internal(_) => {
+                return vm.get_class_by_name("InternalError");
+            }
             Error::InvalidOpCode => {
                 return vm.get_class_by_name("LoadError");
             }

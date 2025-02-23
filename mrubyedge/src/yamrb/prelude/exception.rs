@@ -4,6 +4,8 @@ use crate::{yamrb::{helpers::mrb_define_cmethod, value::*, vm::VM}, Error};
 
 pub(crate) fn initialize_exception(vm: &mut VM) {
     let exp_class: Rc<RClass> = vm.define_standard_class("Exception");
+    let _ = vm.define_standard_class_under("InternalError", exp_class.clone());
+
     // fill in ruby's standard exceptions:
     let std_exp_class: Rc<RClass> = vm.define_standard_class_under("StandardError", exp_class.clone());
     let _ = vm.define_standard_class_under("RuntimeError", std_exp_class.clone());
@@ -24,7 +26,7 @@ pub(crate) fn initialize_exception(vm: &mut VM) {
 }
 
 pub fn mrb_exception_message(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let exp = vm.getself();
+    let exp = vm.getself()?;
     match &exp.value {
         RValue::Exception(e) => {
             let message = e.as_ref().message.clone();

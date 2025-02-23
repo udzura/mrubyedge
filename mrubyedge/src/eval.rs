@@ -2,7 +2,7 @@
 use crate::rite::insn::{self, OpCode};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn debug_eval_insn(mut insns: &[u8]) -> Result<(), crate::rite::Error> {
+pub fn debug_eval_insn(mut insns: &[u8]) -> Result<(), crate::Error> {
     let ps: usize = 0;
     while insns.len() > 0 {
         let op = insns[ps];

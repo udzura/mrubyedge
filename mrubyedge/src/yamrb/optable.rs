@@ -718,7 +718,7 @@ pub(crate) fn op_getidx(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let idx = vm.get_current_regs_cloned(a + 1)?;
     let args = vec![idx];
     // TODO: direct call of array_index for performance
-    let val = mrb_funcall(vm, Some(recv), "[]", &args).expect("calling index failed");
+    let val = mrb_funcall(vm, Some(recv), "[]", &args)?;
     vm.current_regs()[a].replace(val);
     Ok(())
 }
@@ -729,7 +729,7 @@ pub(crate) fn op_setidx(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     let idx = vm.get_current_regs_cloned(a + 1)?;
     let val = vm.get_current_regs_cloned(a + 2)?;
     let args = vec![idx, val];
-    mrb_funcall(vm, Some(recv), "[]=", &args).expect("calling index failed");
+    mrb_funcall(vm, Some(recv), "[]=", &args)?;
         Ok(())
     }
     
@@ -918,7 +918,7 @@ pub(crate) fn op_super(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
         RValue::Instance(ins) => ins.class.as_ref(),
         _ => unreachable!("super must be called on instance"),
     };
-    let superclass = klass.super_class.as_ref().expect("superclass not found");
+    let superclass = klass.super_class.as_ref().ok_or_else(|| Error::internal("superclass not found"))?;
     let sc_procs = superclass.procs.borrow();
     let method = sc_procs.get(&sym_id)
         .ok_or_else(|| Error::NoMethodError(sym_id.clone()))?;
@@ -1065,7 +1065,7 @@ pub(crate) fn op_add(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
         }
         _ => {
             let args = vec![val2.clone()];
-            mrb_funcall(vm, Some(val1.clone()), "+", &args).expect("cannot call + for this receiver")
+            mrb_funcall(vm, Some(val1.clone()), "+", &args)?
         }
     };
     vm.current_regs()[a].replace(result);
@@ -1309,7 +1309,7 @@ pub(crate) fn op_hash(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
     for i in 0..b {
         let key = vm.get_current_regs_cloned(a + i * 2)?;
         let val = vm.get_current_regs_cloned(a + i * 2 + 1)?;
-        hash.insert(key.as_hash_key().expect("Not a hash key type"), (key, val));
+        hash.insert(key.as_hash_key()?, (key, val));
     }
     let val = RObject::hash(hash);
     vm.current_regs()[a as usize].replace(Rc::new(val));

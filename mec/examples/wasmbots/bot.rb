@@ -1,5 +1,7 @@
 $memory = nil
 
+## wasmbots framework part
+
 LOGLEVEL_INFO = 2
 LOGLEVEL_WARN = 1
 LOGLEVEL_ERROR = 0
@@ -84,19 +86,6 @@ class PresentCircumstances
   end
 end
 
-class Brain
-  def write_move!(direction)
-    logFunction(LOGLEVEL_INFO, "direction: #{direction}")
-    $memory[0..2] = [MESSAGE_TYPE_MOVE_TO, direction, 1].pack("C C C")
-  end
-
-  def on_tick(curcumstances)
-
-    write_move!(DIRECTION_NORTH)
-  end
-end
-
-$brain = Brain.new
 
 def clientInitialize
   logFunction(LOGLEVEL_INFO, "Hello, world! This is made by #{RUBY_ENGINE}")
@@ -109,14 +98,11 @@ def setup(requested_size)
   name = "mruby/edge wasmbot"
   $memory[0..17] = name
   # $memory[18..25] = "\0" * 8
-  $memory[26..27] = [0].pack("S")
-  $memory[28..29] = [1].pack("S")
-  $memory[30..31] = [0].pack("S")
+  $memory[26..31] = [0, 2, 0].pack("S S S")
   $memory
 end
   
 def receiveGameParams(offset)
-  logFunction(LOGLEVEL_INFO, "received parameters with offset: #{offset}")
   param = $memory[offset..(offset+10)].unpack("S S S S C C C")
   logFunction(LOGLEVEL_INFO, "param version: #{param[0]}")
   logFunction(LOGLEVEL_INFO, "param engine version: #{param[1]}.#{param[2]}.#{param[3]}")
@@ -130,14 +116,56 @@ def tick(offset)
   param_pre = $memory[offset..(offset+8)].unpack("I C S S")
 
   surroundings_len = param_pre[3]
-  $surroundings = []
-  $offset = offset
+  surroundings = []
 
   surroundings_len.times do |i|
-    ptr = $offset + 9 + i
+    ptr = offset + 9 + i
     tile = $memory[ptr..ptr].unpack("C")
-    $surroundings.push tile[0]
+    surroundings.push tile[0]
   end
-  curcumstances = PresentCircumstances.new(param_pre[0], param_pre[1], param_pre[2], $surroundings)
+  curcumstances = PresentCircumstances.new(param_pre[0], param_pre[1], param_pre[2], surroundings)
   $brain.on_tick(curcumstances)
+rescue Exception => e
+  logFunction(LOGLEVEL_ERROR, "error: #{e.message}")
+  logFunction("stopped")
+  $memory[0..0] = [MESSAGE_TYPE_RESIGN].pack("C")
 end
+
+## main class
+
+class Brain
+  def initialize
+    @turn = 0
+  end
+  attr_reader :turn
+
+  def write_move!(direction)
+    logFunction(LOGLEVEL_INFO, "direction: #{direction}")
+    $memory[0..2] = [MESSAGE_TYPE_MOVE_TO, direction, 1].pack("C C C")
+  end
+
+  def on_tick(curcumstances)
+    if turn > 100
+      logFunction(LOGLEVEL_ERROR, "turn > 100, stopped")
+      $memory[0..0] = [MESSAGE_TYPE_RESIGN].pack("C")
+      return
+    end
+
+    mod = @turn % 4
+    direction = case mod
+    when 0
+      DIRECTION_NORTH
+    when 1
+      DIRECTION_EAST
+    when 2
+      DIRECTION_SOUTH
+    else
+      DIRECTION_WEST
+    end
+
+    write_move!(direction)
+    @turn += 1
+  end
+end
+
+$brain = Brain.new

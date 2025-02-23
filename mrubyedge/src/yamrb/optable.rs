@@ -631,7 +631,7 @@ pub(crate) fn op_getconst(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
             vm.current_regs()[a as usize].replace(val);
         },
         None => {
-            return Err(Error::internal(format!("constant not found: {:?}", name)));
+            return Err(Error::NameError(name.clone()));
         }
     }
     Ok(())
@@ -658,7 +658,7 @@ pub(crate) fn op_getmcnst(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
             vm.current_regs()[a as usize].replace(val);
         },
         None => {
-            return Err(Error::internal(format!("constant not found: {:?}", name)));
+            return Err(Error::NameError(name.clone()));
         }
     }
     Ok(())

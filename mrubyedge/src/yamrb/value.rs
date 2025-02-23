@@ -617,6 +617,9 @@ impl RClass {
             Error::NoMethodError(_) => {
                 return vm.get_class_by_name("NoMethodError");
             }
+            Error::NameError(_) => {
+                return vm.get_class_by_name("NameError");
+            }
         }
     }
 }

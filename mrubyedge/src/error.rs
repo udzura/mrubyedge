@@ -13,6 +13,7 @@ pub enum Error {
     RuntimeError(String),
     TypeMismatch,
     NoMethodError(String),
+    NameError(String),
 }
 
 impl fmt::Display for Error {
@@ -36,6 +37,7 @@ impl Error {
             Error::RuntimeError(msg) => msg.clone(),
             Error::TypeMismatch => "Type mismatch".to_string(),
             Error::NoMethodError(msg) => format!("Method not found: {}", msg),
+            Error::NameError(msg) => format!("Cannot found name: {}", msg),
         }
     }
 
@@ -47,6 +49,7 @@ impl Error {
             (Error::RuntimeError(_), "RuntimeError") => true,
             (Error::TypeMismatch, "StandardError") => true,
             (Error::NoMethodError(_), "NoMethodError") => true,
+            (Error::NameError(_), "NameError") => true,
             _ => false,
         }
     }

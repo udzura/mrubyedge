@@ -21,6 +21,7 @@ pub(crate) fn initialize_exception(vm: &mut VM) {
     let _ = vm.define_standard_class_under("SystemStackError", exp_class.clone());
     let _ = vm.define_standard_class_under("SystemCallError", std_exp_class.clone());
     let _ = vm.define_standard_class_under("NoMethodError", std_exp_class.clone());
+    let _ = vm.define_standard_class_under("NameError", std_exp_class.clone());
 
     mrb_define_cmethod(vm, exp_class, "message", Box::new(mrb_exception_message));
 }

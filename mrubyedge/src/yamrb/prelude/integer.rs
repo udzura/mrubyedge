@@ -13,17 +13,17 @@ pub(crate) fn initialize_integer(vm: &mut VM) {
 }
 
 fn mrb_integer_times(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this: i64 = vm.getself().as_ref().try_into()?;
+    let this: i64 = vm.getself()?.as_ref().try_into()?;
     for i in 0..this {
         let block = args[0].clone();
         let args = vec![Rc::new(RObject::integer(i))];
         mrb_call_block(vm, block, None, &args)?;
     }
-    Ok(vm.getself())
+    vm.getself()
 }
 
 fn mrb_integer_mod(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let lhs: i64 = vm.getself().as_ref().try_into()?;
+    let lhs: i64 = vm.getself()?.as_ref().try_into()?;
     let rhs: i64 = args[0].as_ref().try_into()?;
 
     Ok(Rc::new(RObject::integer(lhs % rhs)))

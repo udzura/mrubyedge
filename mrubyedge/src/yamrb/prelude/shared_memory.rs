@@ -29,7 +29,7 @@ pub fn mrb_shared_memory_new(_vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RO
 }
 
 fn mrb_shared_memory_offset_in_memory(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let sm = match &this.value {
         RValue::SharedMemory(s) => s,
         _ => {
@@ -41,7 +41,7 @@ fn mrb_shared_memory_offset_in_memory(vm: &mut VM, _args: &[Rc<RObject>]) -> Res
 }
 
 fn mrb_shared_memory_set_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let (start, end) = match &args[0].as_ref().value {
         RValue::Range(start, end, exclusive) => {
             let start: u64 = start.as_ref().try_into()?;
@@ -72,7 +72,7 @@ fn mrb_shared_memory_set_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Resul
 }
 
 fn mrb_shared_memory_to_string(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let sm = match &this.value {
         RValue::SharedMemory(s) => s,
         _ => {
@@ -84,7 +84,7 @@ fn mrb_shared_memory_to_string(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<
 }
 
 fn mrb_shared_memory_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let (start, end) = match &args[0].as_ref().value {
         RValue::Range(start, end, exclusive) => {
             let start: u64 = start.as_ref().try_into()?;
@@ -111,7 +111,7 @@ fn mrb_shared_memory_index_range(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc
 
 // SharedMemory#read_by_size(size: Integer, offset: Integer) -> Integer
 fn mrb_shared_memory_read_by_size(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let size: usize = args[0].as_ref().try_into()?;
     let offset: usize = args[1].as_ref().try_into()?;
 
@@ -196,7 +196,7 @@ fn test_mrb_shared_memory_read_by_size() {
     let result: i64 = result.as_ref().try_into().expect("not an integer");
     assert_eq!(result, 0);
 
-    let sm = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let sm = vm.must_getself();
     match &sm.value {
         RValue::SharedMemory(s) => {
             let data = vec![1, 2, 3, 4, 5, 6, 7];

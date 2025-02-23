@@ -1,10 +1,10 @@
 use std::cell::{Cell, RefCell};
 use std::env;
-use std::error::Error;
 use std::rc::Rc;
 use std::collections::HashMap;
 
 use crate::rite::{insn, Irep, Rite};
+use crate::Error;
 
 use super::{op, optable::*};
 use super::prelude::prelude;
@@ -127,7 +127,7 @@ impl VM {
         vm
     }
 
-    pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn Error>>{
+    pub fn run(&mut self) -> Result<Rc<RObject>, Box<dyn std::error::Error>> {
         let class = self.object_class.clone();
         // Insert top_self
         let top_self = RObject{
@@ -176,7 +176,9 @@ impl VM {
                 // reached end of the IREP
                 break;
             }
-            let op = self.current_irep.code.get(pc).unwrap();
+            let op = self.current_irep.code.get(pc).ok_or_else(
+                || Error::internal("end of opcode reached")
+            )?;
             let operand = op.operand;
             self.pc.set(pc + 1);
 
@@ -226,8 +228,20 @@ impl VM {
         &mut self.regs[self.current_regs_offset..]
     }
 
-    pub fn getself(&mut self) -> Rc<RObject> {
-        self.current_regs()[0].clone().unwrap()
+    pub(crate) fn get_current_regs_cloned(&mut self, i: usize) -> Result<Rc<RObject>, Error> {
+        self.current_regs()[i].clone().ok_or_else(|| Error::internal(format!("register {} is not assigned", i)))   
+    }
+
+    pub(crate) fn take_current_regs(&mut self, i: usize) -> Result<Rc<RObject>, Error> {
+        self.current_regs()[i].take().ok_or_else(|| Error::internal(format!("register {} is not assigned", i)))   
+    }
+
+    pub fn getself(&mut self) -> Result<Rc<RObject>, Error> {
+        self.get_current_regs_cloned(0)
+    }
+
+    pub fn must_getself(&mut self) -> Rc<RObject> {
+        self.current_regs()[0].clone().expect("self is not assigned")
     }
 
     pub(crate) fn register_fn(&mut self, f: RFn) -> usize {
@@ -304,7 +318,7 @@ fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
     let code = interpret_insn(&mut irep.insn);
     for ch in irep.catch_handlers.iter() {
         let pos = ch.target;
-        let (i, _) = code.iter().enumerate().find(|(_, op)| op.pos == pos).unwrap();
+        let (i, _) = code.iter().enumerate().find(|(_, op)| op.pos == pos).expect("catch handler mismatch");
         irep1.catch_target_pos.push(i);
     }
     irep1.catch_target_pos.sort();

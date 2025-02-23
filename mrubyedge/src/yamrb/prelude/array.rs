@@ -13,7 +13,7 @@ pub(crate) fn initialize_array(vm: &mut VM) {
 }
 
 fn mrb_array_push_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     mrb_array_push(this, args)
 }
 
@@ -33,7 +33,7 @@ pub fn mrb_array_push(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc<RObj
 }
 
 fn mrb_array_get_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     mrb_array_get_index(this, args)
 }
 
@@ -50,7 +50,7 @@ pub fn mrb_array_get_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc
 }
 
 fn mrb_array_set_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     mrb_array_set_index(this, args)
 }
 
@@ -70,7 +70,7 @@ pub fn mrb_array_set_index(this: Rc<RObject>, args: &[Rc<RObject>]) -> Result<Rc
 }
 
 fn mrb_array_each(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let block = &args[0];
     match &this.value {
         RValue::Array(a) => {
@@ -88,7 +88,7 @@ fn mrb_array_each(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Erro
 }
 
 fn mrb_array_pack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let this = vm.getself();
+    let this = vm.getself()?;
     let format: Vec<u8> = args[0].as_ref().try_into()?;
     let mut buf = vec![];
     match &this.value {

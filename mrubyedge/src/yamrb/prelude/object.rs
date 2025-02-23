@@ -76,13 +76,13 @@ pub fn mrb_object_is_not_equal(_vm: &mut VM, lhs: Rc<RObject>, rhs: Rc<RObject>)
 }
 
 pub fn mrb_object_double_eq(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let lhs = vm.getself();
+    let lhs = vm.getself()?;
     let rhs = args[0].clone();
     Ok(mrb_object_is_equal(vm, lhs, rhs))
 }
 
 pub fn mrb_object_triple_eq(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let lhs = vm.getself();
+    let lhs = vm.getself()?;
     let rhs = args[0].clone();
 
     match (&lhs.value, &rhs.value) {
@@ -122,14 +122,14 @@ pub fn mrb_object_triple_eq(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObj
 
 pub fn mrb_object_object_id(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     // Abstract method; do nothing
-    let x = vm.getself().as_ref().object_id.get();
+    let x = vm.getself()?.object_id.get();
     // ref: https://stackoverflow.com/questions/74491204/how-do-i-represent-an-i64-in-the-u64-domain
     let to_i64 = ((x as i64) ^ (1 << 63)) & (1 << 63) | (x & (u64::MAX >> 1)) as i64;
     Ok(Rc::new(RObject::integer(to_i64)))
 }
 
 pub fn mrb_object_to_s(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
-    let obj = vm.getself();
+    let obj = vm.getself()?;
     Ok(Rc::new(RObject::string(format!("{:?}", obj))))
 }
 

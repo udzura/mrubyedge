@@ -4,10 +4,13 @@ use crate::{yamrb::{helpers::mrb_define_cmethod, value::RObject, vm::VM}, Error}
 
 use super::array::mrb_array_push;
 
+// Initializes String class and its methods.
 pub(crate) fn initialize_string(vm: &mut VM) {
     let string_class = vm.define_standard_class("String");
 
     mrb_define_cmethod(vm, string_class.clone(), "unpack", Box::new(mrb_string_unpack));
+    mrb_define_cmethod(vm, string_class.clone(), "size", Box::new(mrb_string_size));
+    mrb_define_cmethod(vm, string_class.clone(), "length", Box::new(mrb_string_size));
 }
 
 fn bytes_of<const N: usize>(value: &[u8], cursor: usize) -> Result<[u8; N], Error> {
@@ -17,6 +20,19 @@ fn bytes_of<const N: usize>(value: &[u8], cursor: usize) -> Result<[u8; N], Erro
     value[cursor..cursor + N].try_into().map_err(|_| Error::RuntimeError(format!("Bit size mismatch: {}", N)))
 }
 
+// Represents Ruby's String#unpack method.
+// We just support Ruby#pack's format of:
+//   - Q: 64-bit unsigned (unsigned long long)
+//   - q: 64-bit signed (signed long long)
+//   - L: 32-bit unsigned (unsigned long)
+//   - l: 32-bit signed (signed long)
+//   - I: 32-bit unsigned (unsigned int)
+//   - i: 32-bit signed (signed int)
+//   - S: 16-bit unsigned (unsigned short)
+//   - s: 16-bit signed (signed short)
+//   - C: 8-bit unsigned (unsigned char)
+//   - c: 8-bit signed (signed char)
+// for now.
 fn mrb_string_unpack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let this = vm.getself()?;
     let value: Vec<u8> = this.as_ref().try_into()?;
@@ -25,17 +41,6 @@ fn mrb_string_unpack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, E
     let result = Rc::new(RObject::array(Vec::new()));
 
     for c in format.iter() {
-        // We just support Ruby#pack's format of:
-        //   - Q: 64-bit unsigned (unsigned long long)
-        //   - q: 64-bit signed (signed long long)
-        //   - L: 32-bit unsigned (unsigned long)
-        //   - l: 32-bit signed (signed long)
-        //   - I: 32-bit unsigned (unsigned int)
-        //   - i: 32-bit signed (signed int)
-        //   - S: 16-bit unsigned (unsigned short)
-        //   - s: 16-bit signed (signed short)
-        //   - C: 8-bit unsigned (unsigned char)
-        //   - c: 8-bit signed (signed char)
         let value = match c {
             b'Q' => {
                 let value = u64::from_le_bytes(bytes_of::<8>(&value, cursor)?);
@@ -126,4 +131,27 @@ fn test_mrb_string_unpack() {
         let value: i64 = value.as_ref().try_into().expect("value is not integer");
         assert_eq!(value, *expected);
     }
+}
+
+fn mrb_string_size(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself()?;
+    let value: Vec<u8> = this.as_ref().try_into()?;
+    Ok(Rc::new(RObject::integer(value.len() as i64)))
+}
+
+#[test]
+fn test_mrb_string_size() {
+    use crate::yamrb::*;
+
+    let mut vm = VM::empty();
+
+    let data = Rc::new(RObject::string("".into()));
+    let ret = helpers::mrb_funcall(&mut vm, Some(data), "size", &[]).expect("size failed");
+    let ret: i64 = ret.as_ref().try_into().expect("size is not integer");
+    assert_eq!(ret, 0);
+
+    let data = Rc::new(RObject::string("Hello, World".into()));
+    let ret = helpers::mrb_funcall(&mut vm, Some(data), "length", &[]).expect("size failed");
+    let ret: i64 = ret.as_ref().try_into().expect("size is not integer");
+    assert_eq!(ret, 12);
 }

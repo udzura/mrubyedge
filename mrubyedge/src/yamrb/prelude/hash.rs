@@ -3,11 +3,13 @@ use std::rc::Rc;
 use crate::{yamrb::{helpers::{mrb_call_block, mrb_define_cmethod}, value::{RObject, RValue}, vm::VM}, Error};
 
 pub(crate) fn initialize_hash(vm: &mut VM) {
-    let array_class = vm.define_standard_class("Hash");
+    let hash_class = vm.define_standard_class("Hash");
 
-    mrb_define_cmethod(vm, array_class.clone(), "[]", Box::new(mrb_hash_get_index_self));
-    mrb_define_cmethod(vm, array_class.clone(), "[]=", Box::new(mrb_hash_set_index_self));
-    mrb_define_cmethod(vm, array_class.clone(), "each", Box::new(mrb_hash_each));
+    mrb_define_cmethod(vm, hash_class.clone(), "[]", Box::new(mrb_hash_get_index_self));
+    mrb_define_cmethod(vm, hash_class.clone(), "[]=", Box::new(mrb_hash_set_index_self));
+    mrb_define_cmethod(vm, hash_class.clone(), "each", Box::new(mrb_hash_each));
+    mrb_define_cmethod(vm, hash_class.clone(), "size", Box::new(mrb_hash_size));
+    mrb_define_cmethod(vm, hash_class.clone(), "length", Box::new(mrb_hash_size));
 }
 
 fn mrb_hash_get_index_self(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
@@ -124,4 +126,37 @@ fn test_mrb_hash_set_and_index_not_found() {
     let value = mrb_hash_get_index(hash.clone(), key.clone()).expect("getting index failed");
     let value = value.as_ref();
     assert!(value.is_nil());
+}
+
+fn mrb_hash_size(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself()?;
+    let hash = match &this.value {
+        RValue::Hash(a) => a,
+        _ => {
+            return Err(Error::RuntimeError("Hash#size must be called on a hash".to_string()));
+        }
+    };
+    let hash = hash.borrow();
+    Ok(Rc::new(RObject::integer(hash.len() as i64)))
+}
+
+#[test]
+fn test_mrb_hash_size() {
+    use std::collections::HashMap;
+    let mut vm = VM::empty();
+
+    let hash = Rc::new(RObject::hash(HashMap::new()));
+    let key = Rc::new(RObject::string("key".to_string()));
+    let value = Rc::new(RObject::integer(42));
+    vm.current_regs()[0].replace(hash.clone());
+
+    let size = mrb_hash_size(&mut vm, &[]).expect("getting size failed");
+    let size: i64 = size.as_ref().try_into().expect("size is not integer");
+    assert_eq!(size, 0);
+
+    mrb_hash_set_index(hash.clone(), key.clone(), value.clone()).expect("set index failed");
+
+    let size = mrb_hash_size(&mut vm, &[]).expect("getting size failed");
+    let size: i64 = size.as_ref().try_into().expect("size is not integer");
+    assert_eq!(size, 1);
 }

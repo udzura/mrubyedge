@@ -467,6 +467,17 @@ impl TryFrom<&RObject> for Vec<u8> {
     }
 }
 
+impl TryFrom<&RObject> for Vec<Rc<RObject>> {
+    type Error = Error;
+
+    fn try_from(value: &RObject) -> Result<Self, Self::Error> {
+        match &value.value {
+            RValue::Array(a) => Ok(a.borrow().clone()),
+            _ => Err(Error::TypeMismatch),
+        }
+    }
+}
+
 impl TryFrom<&RObject> for () {
     type Error = Error;
 

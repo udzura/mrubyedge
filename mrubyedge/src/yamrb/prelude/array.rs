@@ -9,6 +9,8 @@ pub(crate) fn initialize_array(vm: &mut VM) {
     mrb_define_cmethod(vm, array_class.clone(), "[]", Box::new(mrb_array_get_index_self));
     mrb_define_cmethod(vm, array_class.clone(), "[]=", Box::new(mrb_array_set_index_self));
     mrb_define_cmethod(vm, array_class.clone(), "each", Box::new(mrb_array_each));
+    mrb_define_cmethod(vm, array_class.clone(), "size", Box::new(mrb_array_size));
+    mrb_define_cmethod(vm, array_class.clone(), "length", Box::new(mrb_array_size));
     mrb_define_cmethod(vm, array_class.clone(), "pack", Box::new(mrb_array_pack));
 }
 
@@ -244,4 +246,30 @@ fn test_mrb_array_pack() {
     for (i, v) in value.iter().enumerate() {
         assert_eq!(*v, expected[i]);
     }
+}
+
+fn mrb_array_size(vm: &mut VM, _args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
+    let this = vm.getself()?;
+    let value: Vec<Rc<RObject>> = this.as_ref().try_into()?;
+    Ok(Rc::new(RObject::integer(value.len() as i64)))
+}
+
+#[test]
+fn test_mrb_array_size() {
+    use crate::yamrb::*;
+
+    let mut vm = VM::empty();
+
+    let data = Rc::new(RObject::array(vec![]));
+    let ret = helpers::mrb_funcall(&mut vm, Some(data.clone()), "size", &[]).expect("size failed");
+    let ret: i64 = ret.as_ref().try_into().expect("size is not integer");
+    assert_eq!(ret, 0);
+
+    mrb_array_push(data.clone(), &[Rc::new(RObject::integer(1))]).expect("push failed");
+    mrb_array_push(data.clone(), &[Rc::new(RObject::integer(2))]).expect("push failed");
+    mrb_array_push(data.clone(), &[Rc::new(RObject::integer(3))]).expect("push failed");
+
+    let ret = helpers::mrb_funcall(&mut vm, Some(data), "size", &[]).expect("size failed");
+    let ret: i64 = ret.as_ref().try_into().expect("size is not integer");
+    assert_eq!(ret, 3);
 }

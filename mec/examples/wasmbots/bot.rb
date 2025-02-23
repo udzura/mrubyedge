@@ -84,6 +84,7 @@ class PresentCircumstances
     @hit_points = hit_points
     @surroundings = surroundings
   end
+  attr_reader :last_tick_duration, :last_move_result, :hit_points, :surroundings
 end
 
 
@@ -150,6 +151,7 @@ class Brain
       $memory[0..0] = [MESSAGE_TYPE_RESIGN].pack("C")
       return
     end
+    #logFunction("hit point: #{curcumstances.hit_points}")
 
     mod = @turn % 4
     direction = case mod

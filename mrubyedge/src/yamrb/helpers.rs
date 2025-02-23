@@ -20,7 +20,7 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
     }
 
     vm.pc.set(0);
-    vm.current_irep = block.irep.as_ref().unwrap().clone();
+    vm.current_irep = block.irep.as_ref().ok_or_else(|| Error::RuntimeError("No IREP".to_string()))?.clone();
     vm.upper = block.environ;
 
     let res = vm.run();
@@ -39,8 +39,8 @@ fn call_block(vm: &mut VM, block: RProc, recv: Rc<RObject>, args: &[Rc<RObject>]
     }
 
     if let Some(ci) = old_callinfo {
-        if ci.prev.is_some() {
-            vm.current_callinfo.replace(ci.prev.clone().unwrap());
+        if let Some(prev) = &ci.prev {
+            vm.current_callinfo.replace(prev.clone());
         }
         vm.current_irep = ci.pc_irep.clone();
         vm.pc.set(ci.pc);
@@ -77,7 +77,7 @@ pub fn mrb_call_block(vm: &mut VM, block: Rc<RObject>, recv: Option<Rc<RObject>>
     };
     let recv = match recv {
         Some(r) => r,
-        None => block.block_self.clone().unwrap(),
+        None => block.block_self.clone().ok_or_else(|| Error::RuntimeError("No block self assigned".to_string()))?,
     };
     call_block(vm, block, recv, args)
 }
@@ -85,10 +85,10 @@ pub fn mrb_call_block(vm: &mut VM, block: Rc<RObject>, recv: Option<Rc<RObject>>
 pub fn mrb_funcall(vm: &mut VM, top_self: Option<Rc<RObject>>, name: &str, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let recv: Rc<RObject> = match top_self {
         Some(obj) => obj,
-        None => vm.current_regs()[0].as_ref().unwrap().clone(),
+        None => vm.getself()?,
     };
     let binding = recv.as_ref().get_class(vm);
-    let method = binding.as_ref().find_method(name).expect("Method not found").clone();
+    let method = binding.as_ref().find_method(name).ok_or_else(|| Error::NoMethodError(name.to_string()))?;
     
     if method.is_rb_func {
         call_block(vm, method, recv.clone(), args)

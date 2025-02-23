@@ -10,6 +10,13 @@ pub(crate) fn initialize_string(vm: &mut VM) {
     mrb_define_cmethod(vm, string_class.clone(), "unpack", Box::new(mrb_string_unpack));
 }
 
+fn bytes_of<const N: usize>(value: &[u8], cursor: usize) -> Result<[u8; N], Error> {
+    if value.len() < cursor + N {
+        return Err(Error::RuntimeError("Not enough bytes".to_string()));
+    }
+    value[cursor..cursor + N].try_into().map_err(|_| Error::RuntimeError(format!("Bit size mismatch: {}", N)))
+}
+
 fn mrb_string_unpack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, Error> {
     let this = vm.getself()?;
     let value: Vec<u8> = this.as_ref().try_into()?;
@@ -31,42 +38,42 @@ fn mrb_string_unpack(vm: &mut VM, args: &[Rc<RObject>]) -> Result<Rc<RObject>, E
         //   - c: 8-bit signed (signed char)
         let value = match c {
             b'Q' => {
-                let value = u64::from_le_bytes(value[cursor..cursor+8].try_into().unwrap());
+                let value = u64::from_le_bytes(bytes_of::<8>(&value, cursor)?);
                 cursor += 8;
                 value as i64
             }
             b'q' => {
-                let value = i64::from_le_bytes(value[cursor..cursor+8].try_into().unwrap());
+                let value = i64::from_le_bytes(bytes_of::<8>(&value, cursor)?);
                 cursor += 8;
                 value as i64
             }
             b'L' | b'I' => {
-                let value = u32::from_le_bytes(value[cursor..cursor+4].try_into().unwrap());
+                let value = u32::from_le_bytes(bytes_of::<4>(&value, cursor)?);
                 cursor += 4;
                 value as i64
             }
             b'l' | b'i' => {
-                let value = i32::from_le_bytes(value[cursor..cursor+4].try_into().unwrap());
+                let value = i32::from_le_bytes(bytes_of::<4>(&value, cursor)?);
                 cursor += 4;
                 value as i64
             }
             b'S' => {
-                let value = u16::from_le_bytes(value[cursor..cursor+2].try_into().unwrap());
+                let value = u16::from_le_bytes(bytes_of::<2>(&value, cursor)?);
                 cursor += 2;
                 value as i64
             }
             b's' => {
-                let value = i16::from_le_bytes(value[cursor..cursor+2].try_into().unwrap());
+                let value = i16::from_le_bytes(bytes_of::<2>(&value, cursor)?);
                 cursor += 2;
                 value as i64
             }
             b'C' => {
-                let value = i8::from_le_bytes(value[cursor..cursor+1].try_into().unwrap());
+                let value = i8::from_le_bytes(bytes_of::<1>(&value, cursor)?);
                 cursor += 1;
                 value as i64
             }
             b'c' => {
-                let value = u8::from_le_bytes(value[cursor..cursor+1].try_into().unwrap());
+                let value = u8::from_le_bytes(bytes_of::<1>(&value, cursor)?);
                 cursor += 1;
                 value as i64
             }

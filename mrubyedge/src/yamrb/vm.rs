@@ -176,7 +176,9 @@ impl VM {
                 // reached end of the IREP
                 break;
             }
-            let op = self.current_irep.code.get(pc).unwrap();
+            let op = self.current_irep.code.get(pc).ok_or_else(
+                || Error::internal("end of opcode reached")
+            )?;
             let operand = op.operand;
             self.pc.set(pc + 1);
 
@@ -239,7 +241,7 @@ impl VM {
     }
 
     pub fn must_getself(&mut self) -> Rc<RObject> {
-        self.current_regs()[0].clone().unwrap()
+        self.current_regs()[0].clone().expect("self is not assigned")
     }
 
     pub(crate) fn register_fn(&mut self, f: RFn) -> usize {
@@ -316,7 +318,7 @@ fn load_irep_1(reps: &mut [Irep], pos: usize) -> (IREP, usize) {
     let code = interpret_insn(&mut irep.insn);
     for ch in irep.catch_handlers.iter() {
         let pos = ch.target;
-        let (i, _) = code.iter().enumerate().find(|(_, op)| op.pos == pos).unwrap();
+        let (i, _) = code.iter().enumerate().find(|(_, op)| op.pos == pos).expect("catch handler mismatch");
         irep1.catch_target_pos.push(i);
     }
     irep1.catch_target_pos.sort();

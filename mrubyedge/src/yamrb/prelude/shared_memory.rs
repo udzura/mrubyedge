@@ -196,7 +196,7 @@ fn test_mrb_shared_memory_read_by_size() {
     let result: i64 = result.as_ref().try_into().expect("not an integer");
     assert_eq!(result, 0);
 
-    let sm = vm.current_regs()[0].as_ref().cloned().unwrap();
+    let sm = vm.must_getself();
     match &sm.value {
         RValue::SharedMemory(s) => {
             let data = vec![1, 2, 3, 4, 5, 6, 7];

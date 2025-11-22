@@ -6,7 +6,7 @@ extern crate mrubyedge;
 
 fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().skip(1).collect();
-    let path = &args[0];
+    let path = args.get(0).expect("Usage: $0 <mruby-compiled-file>");
 
     let mut file = File::open(path)?;
     let mut bin = Vec::<u8>::new();
@@ -14,7 +14,9 @@ fn main() -> Result<(), std::io::Error> {
 
     let mut rite = mrubyedge::rite::load(&bin).unwrap();
     dbg!(&rite);
-    let vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
+    let mut vm = mrubyedge::yamrb::vm::VM::open(&mut rite);
     dbg!(&vm.irep);
+    let res = vm.run().unwrap();
+    eprintln!("return value: {:?}", res);
     Ok(())
 }

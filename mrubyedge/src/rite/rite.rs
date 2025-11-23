@@ -121,7 +121,7 @@ pub fn load<'a>(src: &'a [u8]) -> Result<Rite<'a>, Error> {
     Ok(rite)
 }
 
-pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep>), Error> {
+pub fn section_irep_1(head: &[u8]) -> Result<(usize, SectionIrepHeader, Vec<Irep<'_>>), Error> {
 let mut cur = 0;
 
     let irep_header_size = mem::size_of::<SectionIrepHeader>();

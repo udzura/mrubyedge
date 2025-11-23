@@ -2,6 +2,13 @@
 name = "mrubyedge-cli"
 version = "0.9.0-rc1"
 edition = "2024"
+authors = ["Uchio Kondo <udzura@udzura.jp>"]
+description = "mruby/edge cli endpoint - run, compile to wasm, etc."
+license = "BSD-3-Clause"
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
 
 [[bin]]
 name = "mrbedge"
@@ -10,4 +17,4 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = ">= 4.5", features = ["derive"] }
 mruby-compiler2-sys = "0.1.0"
-mrubyedge = { version = "1.0.5", path = "../mrubyedge" }
+mrubyedge = { version = "1.0.5" }

@@ -1,3 +1,3 @@
 pub fn execute() {
-    println!("Running wasm command...");
+    todo!("WASM command is not yet implemented");
 }

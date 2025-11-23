@@ -1,3 +1,3 @@
 pub fn execute_npm() {
-    println!("Running scaffold npm command...");
+    todo!("NPM package scaffold command is not yet implemented");
 }

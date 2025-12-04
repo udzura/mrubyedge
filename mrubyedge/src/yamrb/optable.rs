@@ -1017,9 +1017,12 @@ pub(crate) fn op_return(vm: &mut VM, operand: &Fetched) -> Result<(), Error> {
 
     let ci = vm.current_callinfo.take();
     if ci.is_none() {
+        // When called from mrb_funcall, return error if there's an exception
         if let Some(e) = &vm.exception {
             return Err(e.error_type.borrow().clone());
         }
+        // For normal completion, set preemption flag and terminate
+        vm.flag_preemption.set(true);
         return Ok(());
     }
 

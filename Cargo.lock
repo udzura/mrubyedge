@@ -533,21 +533,21 @@ dependencies = [
 [[package]]
 name = "mrubyedge"
 version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26b2534070d33a4b55643b43d3d9d457b31ceb7e30034d1cd210352bfa0996a9"
 dependencies = [
- "criterion",
  "getrandom",
- "mec-mrbc-sys",
  "plain",
  "simple_endian",
 ]
 
 [[package]]
 name = "mrubyedge"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26b2534070d33a4b55643b43d3d9d457b31ceb7e30034d1cd210352bfa0996a9"
+version = "1.0.6"
 dependencies = [
+ "criterion",
  "getrandom",
+ "mec-mrbc-sys",
  "plain",
  "simple_endian",
 ]
@@ -558,7 +558,7 @@ version = "0.9.0-rc1"
 dependencies = [
  "clap",
  "mruby-compiler2-sys",
- "mrubyedge 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mrubyedge 1.0.5",
 ]
 
 [[package]]

@@ -14,26 +14,23 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        BUILD_TARGET: [release] # refers to a cargo profile
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-
+      - uses: actions/checkout@v5
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install C compiler
         run: sudo apt-get update && sudo apt-get install -y build-essential
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Run mruby/edge tests
-        run: cargo test
-        working-directory: mrubyedge
-
-      - name: Build
-        run: cargo build --release
-        working-directory: mrubyedge
+      - name: Run tests for "${{ matrix.BUILD_TARGET }}" profile
+        run: cargo test --profile ${{ matrix.BUILD_TARGET }}
+      - name: Build binaries for "${{ matrix.BUILD_TARGET }}" profile
+        run: cargo build --profile ${{ matrix.BUILD_TARGET }}

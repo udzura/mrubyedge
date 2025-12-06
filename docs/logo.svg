@@ -1,0 +1,22 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background (optional, for preview) -->
+            <rect width="400" height="400" fill="white" rx="20"/>
+            
+            <!-- Ruby gem shape (pentagon - thinner top section height) -->
+            <polygon points="140,140 260,140 300,200 200,310 100,200" 
+                     fill="#654FF0"/>
+            
+            <!-- Text inside ruby shape -->
+            <text x="200" y="195" 
+                  font-family="Arial, sans-serif" 
+                  font-size="30" 
+                  font-weight="bold" 
+                  fill="white" 
+                  text-anchor="middle">mruby</text>
+            <text x="200" y="225" 
+                  font-family="Arial, sans-serif" 
+                  font-size="30" 
+                  font-weight="300" 
+                  fill="white" 
+                  text-anchor="middle">/edge</text>
+        </svg>
